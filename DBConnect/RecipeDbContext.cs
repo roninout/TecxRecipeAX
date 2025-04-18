@@ -5,6 +5,7 @@ using Npgsql;
 
 namespace TechRecipeAX
 {
+    [DbConfigurationType(typeof(NpgsqlConfiguration))]
     public class RecipeDbContext : DbContext
     {
         public DbSet<BaseParameter> BaseParameters { get; set; }
@@ -13,7 +14,8 @@ namespace TechRecipeAX
         public DbSet<RecipeStage> RecipeStages { get; set; }
         public DbSet<Recipe> Recipes { get; set; }
 
-        public RecipeDbContext(string connectionString) : base(connectionString)
+        public RecipeDbContext(string connectionString)
+            : base(new NpgsqlConnection(connectionString), contextOwnsConnection: true)
         {
             Database.SetInitializer(new CreateDatabaseIfNotExists<RecipeDbContext>());            
             Database.Initialize(true);
@@ -26,5 +28,16 @@ namespace TechRecipeAX
             base.OnModelCreating(modelBuilder);
         }
 
+    }
+
+     //провайдер Npgsql сервер
+    class NpgsqlConfiguration : DbConfiguration
+    {
+        public NpgsqlConfiguration()
+        {
+            SetProviderServices("Npgsql", NpgsqlServices.Instance);
+            SetProviderFactory("Npgsql", NpgsqlFactory.Instance);
+            SetDefaultConnectionFactory(new NpgsqlConnectionFactory());
+        }
     }
 }

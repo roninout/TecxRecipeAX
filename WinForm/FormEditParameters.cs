@@ -1,51 +1,65 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Text;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DevExpress.XtraEditors;
 using TechRecipeAX;
 using DevExpress.XtraGrid.Views.Grid;
+using System.Data.Entity;
+using System.ComponentModel;
+using DevExpress.XtraGrid.Columns;
+using System.Runtime.Remoting.Contexts;
 
 namespace TecxRecipeAX
 {
-	public partial class FormEditParameters: XtraForm
-	{
+    public partial class FormEditParameters : XtraForm
+    {
         private RecipeDbContext _context;
+        private BindingList<BaseParameter> _bindingList;
 
-        public FormEditParameters()
-		{
+        public FormEditParameters(RecipeDbContext context)
+        {
             InitializeComponent();
 
-            _context = new RecipeDbContext(ConfigHelper.GetConnectionString());
-
-            InitializeDataGrid();
+            //_context = new RecipeDbContext(ConfigHelper.GetConnectionString());
+            _context = context;
+            _ = InitializeDataGrid();
         }
 
         #region Table
 
         // Загрузка параметров в таблицу
-        private void InitializeDataGrid()
+        private async Task InitializeDataGrid()
         {
-            gridControlParameters.DataSource = _context.BaseParameters.ToList();
-            GridView view = gridControlParameters.MainView as GridView;
+            try
+            {
+                var parameters = await _context.BaseParameters.ToListAsync();
 
-            // Настройка колонок
-            view.Columns["Id"].Visible = false;
-            view.Columns["Name"].Caption = "Name";
-            view.Columns["Type"].Caption = "Type";
-            view.Columns["Description"].Caption = "Description";
+                _bindingList = new BindingList<BaseParameter>(parameters);
+                gridControlParameters.DataSource = _bindingList;
 
-            // Настройка ширины колонки Description
-            view.Columns["Description"].Width = 252;
+                gridViewParameters.OptionsBehavior.Editable = true;
+                gridViewParameters.OptionsView.NewItemRowPosition = NewItemRowPosition.None;
+                gridViewParameters.OptionsView.ShowGroupPanel = false;
 
-            // Включение редактирования
-            view.OptionsBehavior.Editable = true;
-            view.OptionsView.NewItemRowPosition = NewItemRowPosition.None;
+                gridViewParameters.OptionsBehavior.AllowDeleteRows = DevExpress.Utils.DefaultBoolean.True;
+                gridViewParameters.OptionsSelection.MultiSelect = true;
+                gridViewParameters.OptionsSelection.MultiSelectMode = GridMultiSelectMode.RowSelect;
+                gridViewParameters.OptionsSelection.EnableAppearanceFocusedCell = false;
+
+                // Сортируем данные по колонке Type
+                gridViewParameters.SortInfo.Clear();
+                gridViewParameters.SortInfo.Add(new DevExpress.XtraGrid.Columns.GridColumnSortInfo(gridViewParameters.Columns["type"], DevExpress.Data.ColumnSortOrder.Ascending));
+
+                // Устанавливаем информацию о количестве элементов в строке состояния
+                gridViewParameters.OptionsView.ShowFooter = true;
+                GridColumn colType = gridViewParameters.Columns["description"];
+                colType.Summary.Add(DevExpress.Data.SummaryItemType.Count, "description", "Total items: {0}");
+            }
+            catch (Exception ex)
+            {
+                XtraMessageBox.Show("Error loading data: " + ex.Message);
+            }
         }
 
         #endregion
@@ -62,38 +76,18 @@ namespace TecxRecipeAX
                 description = "Description"
             };
 
+            // Добавляем новый параметр в BindingList
+            _bindingList.Add(newParam);
+
+            // Добавляем новый параметр в базу данных
             _context.BaseParameters.Add(newParam);
             _context.SaveChanges();
-
-            // Обновляем источник данных
-            gridControlParameters.DataSource = _context.BaseParameters.ToList();
         }
 
         // Кнопка "Удалить параметр"
         private void btnDeleteParameter_Click(object sender, EventArgs e)
         {
-            GridView view = gridControlParameters.MainView as GridView;
-            if (view.FocusedRowHandle >= 0)
-            {
-                int paramId = (int)view.GetFocusedRowCellValue("Id");
-                var param = _context.BaseParameters.Find(paramId);
-                if (param != null)
-                {
-                    _context.BaseParameters.Remove(param);
-                    _context.SaveChanges();
-
-                    // Обновляем источник данных
-                    gridControlParameters.DataSource = _context.BaseParameters.ToList();
-                }
-            }
-        }
-
-        // Кнопка "Сохранить изменения"
-        private void btnSaveChanges_Click(object sender, EventArgs e)
-        {
-            // Для DevExpress обычно используется привязка данных, но в этом случае сохраняем напрямую
-            _context.SaveChanges();
-            XtraMessageBox.Show("Changes saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            DeleteSelectedParameters();
         }
 
         #endregion
@@ -101,8 +95,61 @@ namespace TecxRecipeAX
         // Обработчик события редактирования в GridView
         private void gridViewParameters_RowUpdated(object sender, DevExpress.XtraGrid.Views.Base.RowObjectEventArgs e)
         {
-            // Автоматическое сохранение при редактировании (опционально)
+            if (e.Row is BaseParameter param)
+            {
+                _context.Entry(param).State = EntityState.Modified;
+                _context.SaveChanges();
+            }
+        }
+
+        private void gridViewParameters_RowDeleting(object sender, DevExpress.Data.RowDeletingEventArgs e)
+        {
+            DeleteSelectedParameters();
+            e.Cancel = true; // отменяем стандартное поведение DevExpress, иначе может возникнуть конфликт
+        }
+
+        private void gridViewParameters_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Delete && gridViewParameters.FocusedRowHandle >= 0)
+            {
+                gridViewParameters.DeleteRow(gridViewParameters.FocusedRowHandle);
+                e.Handled = true;
+            }
+        }
+
+        private void DeleteSelectedParameters()
+        {
+            GridView view = gridControlParameters.MainView as GridView;
+            if (view == null) return;
+
+            var selectedRows = view.GetSelectedRows();
+            if (selectedRows.Length == 0) return;
+
+            string message = selectedRows.Length == 1
+                ? $"Удалить параметр \"{(view.GetRow(selectedRows[0]) as BaseParameter)?.name}\"?"
+                : $"Удалить {selectedRows.Length} параметров?";
+
+            var confirm = XtraMessageBox.Show(
+                message,
+                "Подтверждение удаления",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning
+            );
+
+            if (confirm != DialogResult.Yes)
+                return;
+
+            foreach (int rowHandle in selectedRows)
+            {
+                var param = view.GetRow(rowHandle) as BaseParameter;
+                if (param != null)
+                {
+                    _bindingList.Remove(param);
+                    _context.BaseParameters.Remove(param);
+                }
+            }
             _context.SaveChanges();
         }
+
     }
 }

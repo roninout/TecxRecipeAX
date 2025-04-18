@@ -12,6 +12,8 @@ using Microsoft.Win32;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using TecxRecipeAX;
+using System.Data.Entity;
+using System.Data.SqlClient;
 
 namespace TechRecipeAX
 {
@@ -23,10 +25,14 @@ namespace TechRecipeAX
 
     public partial class RecipeUI : UserControl, ITechRecipeAX
     {
+        private RecipeDbContext _context;
+
         public RecipeUI()
 		{
             InitializeComponent();
-		}
+            _context = new RecipeDbContext(ConfigHelper.GetConnectionString());
+            LoadDataAsync();
+        }
 
         #region Регистрация класса в реестре
         [ComRegisterFunction()]
@@ -80,12 +86,104 @@ namespace TechRecipeAX
         // создание и редактирование параметров
         private void btnEditParameters_Click(object sender, EventArgs e)
         {
-            using (var form = new FormEditParameters())
+            using (var form = new FormEditParameters(_context))
             {
                 form.ShowDialog();
             }
         }
 
         #endregion
+
+        private async void LoadDataAsync()
+        {
+            //// Показываем прогресс-бар
+            //progressBarControl1.Visible = true;
+            //progressBarControl1.EditValue = 0;
+
+            //// Задаем прогресс-бар на 0 в начале
+            //int totalItems = await _context.BaseParameters.CountAsync(); // Пример для количества элементов
+            //int currentItem = 0;
+
+            //// Асинхронно загружаем данные (можно адаптировать для вашего случая)
+            //var stages = await _context.BaseParameters.ToListAsync();
+
+            //// Обновление прогресс-бара
+            //foreach (var stage in stages)
+            //{
+            //    currentItem++;
+            //    progressBarControl1.EditValue = (int)((double)currentItem / totalItems * 100);
+            //    await Task.Delay(10); // Имитация времени загрузки
+            //}
+
+            //// Данные загружены, скрываем прогресс-бар и показываем gridControl
+            //progressBarControl1.Visible = false;
+
+            try
+            {
+                // Обновляем строку состояния о процессе подключения
+                toolStripStatusLabel1.Text = "Подключение к базе данных...";
+                toolStripStatusLabel1.ForeColor = Color.Black;
+
+                // Проверка подключения к БД
+                if (!await TestDatabaseConnectionAsync())
+                {
+                    throw new Exception("Не удалось подключиться к базе данных.");
+                }
+
+                // Обновляем строку состояния на "Подключено"
+                toolStripStatusLabel1.Text = "Подключение установлено.";
+                toolStripStatusLabel1.ForeColor = Color.Green;
+
+                // Показываем прогресс-бар
+                progressBarControl1.Visible = true;
+                progressBarControl1.EditValue = 0;
+
+                // Получаем количество элементов для прогресса
+                int totalItems = await _context.BaseParameters.CountAsync();
+                int currentItem = 0;
+
+                // Асинхронно загружаем данные
+                var stages = await _context.BaseParameters.ToListAsync();
+
+                // Обновление прогресс-бара
+                foreach (var stage in stages)
+                {
+                    currentItem++;
+                    progressBarControl1.EditValue = (int)((double)currentItem / totalItems * 100);
+                    await Task.Delay(10); // Имитация времени загрузки
+                }
+
+                // Данные загружены, скрываем прогресс-бар и показываем gridControl
+                progressBarControl1.Visible = false;
+                gridControl1.Visible = true; // Показываем таблицу
+            }
+            catch (Exception ex)
+            {
+                // В случае ошибки обновляем строку состояния
+                toolStripStatusLabel1.Text = $"Ошибка подключения: {ex.Message}";
+                toolStripStatusLabel1.ForeColor = Color.Red;
+
+                // Скрываем прогресс-бар, если возникла ошибка
+                progressBarControl1.Visible = false;
+            }
+        }
+
+        // Метод для проверки подключения
+        private async Task<bool> TestDatabaseConnectionAsync()
+        {
+            try
+            {
+                // Используем SqlConnection для проверки подключения
+                using (var connection = new SqlConnection(ConfigHelper.GetConnectionString()))
+                {
+                    await connection.OpenAsync();
+                    return connection.State == System.Data.ConnectionState.Open;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 }
