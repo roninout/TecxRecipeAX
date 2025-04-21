@@ -21,7 +21,6 @@ namespace TecxRecipeAX
         {
             InitializeComponent();
 
-            //_context = new RecipeDbContext(ConfigHelper.GetConnectionString());
             _context = context;
             _ = InitializeDataGrid();
         }
@@ -62,6 +61,41 @@ namespace TecxRecipeAX
             }
         }
 
+        // Обработчик события редактирования в GridView
+        private void gridViewParameters_RowUpdated(object sender, DevExpress.XtraGrid.Views.Base.RowObjectEventArgs e)
+        {
+            if (e.Row is BaseParameter param)
+            {
+                _context.Entry(param).State = EntityState.Modified;
+                _context.SaveChanges();
+            }
+        }
+
+        // удаление строк
+        private void gridViewParameters_RowDeleting(object sender, DevExpress.Data.RowDeletingEventArgs e)
+        {
+            DeleteSelectedParameters();
+            e.Cancel = true; // отменяем стандартное поведение DevExpress, иначе может возникнуть конфликт
+        }
+
+        // нажатие кнопки Delete или Enter
+        private void gridViewParameters_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Delete && gridViewParameters.FocusedRowHandle >= 0)
+            {
+                gridViewParameters.DeleteRow(gridViewParameters.FocusedRowHandle);
+                e.Handled = true;
+            }
+
+            if (e.KeyCode == Keys.Enter)
+            {
+                gridViewParameters.CloseEditor();        // Завершаем редактирование ячейки
+                gridViewParameters.UpdateCurrentRow();   // Сохраняем изменения строки (вызовет RowUpdated)
+                e.Handled = true;                        // Останавливаем дальнейшее распространение
+            }
+        }
+
+
         #endregion
 
         #region Buttons
@@ -92,31 +126,8 @@ namespace TecxRecipeAX
 
         #endregion
 
-        // Обработчик события редактирования в GridView
-        private void gridViewParameters_RowUpdated(object sender, DevExpress.XtraGrid.Views.Base.RowObjectEventArgs e)
-        {
-            if (e.Row is BaseParameter param)
-            {
-                _context.Entry(param).State = EntityState.Modified;
-                _context.SaveChanges();
-            }
-        }
-
-        private void gridViewParameters_RowDeleting(object sender, DevExpress.Data.RowDeletingEventArgs e)
-        {
-            DeleteSelectedParameters();
-            e.Cancel = true; // отменяем стандартное поведение DevExpress, иначе может возникнуть конфликт
-        }
-
-        private void gridViewParameters_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Delete && gridViewParameters.FocusedRowHandle >= 0)
-            {
-                gridViewParameters.DeleteRow(gridViewParameters.FocusedRowHandle);
-                e.Handled = true;
-            }
-        }
-
+        #region Stuff
+        // метод удаления
         private void DeleteSelectedParameters()
         {
             GridView view = gridControlParameters.MainView as GridView;
@@ -151,5 +162,6 @@ namespace TecxRecipeAX
             _context.SaveChanges();
         }
 
+        #endregion
     }
 }

@@ -104,7 +104,7 @@
   <ItemGroup>
     <Compile Include="AX\ITechRecipeAXEvents.cs" />
     <Compile Include="AX\ITechRecipeAX.cs" />
-    <Compile Include="Class1.cs" />
+    <Compile Include="Logger.cs" />
     <Compile Include="ConfigHelper.cs" />
     <Compile Include="DBConnect\BaseParameter.cs" />
     <Compile Include="DBConnect\BaseRecipeStage.cs" />
@@ -130,6 +130,12 @@
     <Compile Include="WinForm\FormEditParameters.Designer.cs">
       <DependentUpon>FormEditParameters.cs</DependentUpon>
     </Compile>
+    <Compile Include="WinForm\FormEditStages.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="WinForm\FormEditStages.Designer.cs">
+      <DependentUpon>FormEditStages.cs</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -149,6 +155,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="WinForm\FormEditParameters.resx">
       <DependentUpon>FormEditParameters.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="WinForm\FormEditStages.resx">
+      <DependentUpon>FormEditStages.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

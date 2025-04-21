@@ -14,6 +14,9 @@ using System.Runtime.InteropServices;
 using TecxRecipeAX;
 using System.Data.Entity;
 using System.Data.SqlClient;
+using DevExpress.Xpo.Logger;
+using System.Diagnostics;
+using System.IO;
 
 namespace TechRecipeAX
 {
@@ -26,13 +29,103 @@ namespace TechRecipeAX
     public partial class RecipeUI : UserControl, ITechRecipeAX
     {
         private RecipeDbContext _context;
+        //private static readonly TraceSource _logger = new TraceSource("TechRecipeAX.Database");
 
         public RecipeUI()
 		{
             InitializeComponent();
-            _context = new RecipeDbContext(ConfigHelper.GetConnectionString());
-            LoadDataAsync();
+            // Запускаем асинхронную инициализацию
+            this.Load += async (sender, e) => await InitializeAsync();
         }
+
+        #region Init data
+
+        private async Task InitializeAsync()
+        {
+            Logger.Info(@" -------------------- Начало инициализации приложения ---------------- ");
+
+            try
+            {
+                await InitializeDbContextAsync();
+                await LoadDataAsync(); // Теперь можно вызывать асинхронно
+                Logger.Info(@"Инициализация приложения завершена успешно");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Ошибка при инициализации приложения: {ex.Message}\n{ex.StackTrace}");
+                throw;
+            }
+        }
+
+        private async Task InitializeDbContextAsync()
+        {
+            try
+            {
+                string connectionString = ConfigHelper.GetConnectionString();
+                Logger.Debug($"Получена строка подключения: {connectionString}");
+
+                _context = new RecipeDbContext(connectionString);
+
+                // Проверяем подключение асинхронно
+                await _context.Database.Connection.OpenAsync();
+                Logger.Info($"Версия SQL Server: {_context.Database.Connection.ServerVersion}");
+                _context.Database.Connection.Close();
+
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Ошибка подключения к БД: {ex.Message}");
+
+                // Обработка ошибок подключения
+                toolStripStatusLabel1.Text = $"Ошибка подключения к БД: {ex.Message}";
+                toolStripStatusLabel1.ForeColor = Color.Red;
+                throw; // Можно обработать иначе, в зависимости от требований
+            }
+        }
+
+        private async Task LoadDataAsync()
+        {
+            Logger.Info("Старт асинхронной загрузки данных");
+
+            try
+            {
+                if (_context == null) { await InitializeDbContextAsync(); }
+
+                toolStripStatusLabel1.Text = "Подключение к базе данных...";
+                toolStripStatusLabel1.ForeColor = Color.Black;
+
+                progressBarControl1.Visible = true;
+                progressBarControl1.EditValue = 0;
+
+                int totalItems = await _context.BaseParameters.CountAsync();
+                int currentItem = 0;
+
+                var stages = await _context.BaseParameters.ToListAsync();
+                Logger.Debug($"Загружено {stages.Count} записей");
+
+                foreach (var stage in stages)
+                {
+                    currentItem++;
+                    progressBarControl1.EditValue = (int)((double)currentItem / totalItems * 100);
+                    await Task.Delay(10);
+                }
+
+                progressBarControl1.Visible = false;
+                gridControl1.Visible = true;
+                toolStripStatusLabel1.Text = "Подключение установлено.";
+                toolStripStatusLabel1.ForeColor = Color.Green;
+                Logger.Info("Данные успешно загружены.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Ошибка при загрузке данных");
+                toolStripStatusLabel1.Text = $"Ошибка: {ex.Message}";
+                toolStripStatusLabel1.ForeColor = Color.Red;
+                progressBarControl1.Visible = false;
+            }
+        }
+
+        #endregion
 
         #region Регистрация класса в реестре
         [ComRegisterFunction()]
@@ -92,98 +185,17 @@ namespace TechRecipeAX
             }
         }
 
+        // создание и редактирование стадий
+        private void btnEditStages_Click(object sender, EventArgs e)
+        {
+            using (var form = new FormEditStages(_context))
+            {
+                form.ShowDialog();
+            }
+        }
+
         #endregion
 
-        private async void LoadDataAsync()
-        {
-            //// Показываем прогресс-бар
-            //progressBarControl1.Visible = true;
-            //progressBarControl1.EditValue = 0;
 
-            //// Задаем прогресс-бар на 0 в начале
-            //int totalItems = await _context.BaseParameters.CountAsync(); // Пример для количества элементов
-            //int currentItem = 0;
-
-            //// Асинхронно загружаем данные (можно адаптировать для вашего случая)
-            //var stages = await _context.BaseParameters.ToListAsync();
-
-            //// Обновление прогресс-бара
-            //foreach (var stage in stages)
-            //{
-            //    currentItem++;
-            //    progressBarControl1.EditValue = (int)((double)currentItem / totalItems * 100);
-            //    await Task.Delay(10); // Имитация времени загрузки
-            //}
-
-            //// Данные загружены, скрываем прогресс-бар и показываем gridControl
-            //progressBarControl1.Visible = false;
-
-            try
-            {
-                // Обновляем строку состояния о процессе подключения
-                toolStripStatusLabel1.Text = "Подключение к базе данных...";
-                toolStripStatusLabel1.ForeColor = Color.Black;
-
-                // Проверка подключения к БД
-                if (!await TestDatabaseConnectionAsync())
-                {
-                    throw new Exception("Не удалось подключиться к базе данных.");
-                }
-
-                // Обновляем строку состояния на "Подключено"
-                toolStripStatusLabel1.Text = "Подключение установлено.";
-                toolStripStatusLabel1.ForeColor = Color.Green;
-
-                // Показываем прогресс-бар
-                progressBarControl1.Visible = true;
-                progressBarControl1.EditValue = 0;
-
-                // Получаем количество элементов для прогресса
-                int totalItems = await _context.BaseParameters.CountAsync();
-                int currentItem = 0;
-
-                // Асинхронно загружаем данные
-                var stages = await _context.BaseParameters.ToListAsync();
-
-                // Обновление прогресс-бара
-                foreach (var stage in stages)
-                {
-                    currentItem++;
-                    progressBarControl1.EditValue = (int)((double)currentItem / totalItems * 100);
-                    await Task.Delay(10); // Имитация времени загрузки
-                }
-
-                // Данные загружены, скрываем прогресс-бар и показываем gridControl
-                progressBarControl1.Visible = false;
-                gridControl1.Visible = true; // Показываем таблицу
-            }
-            catch (Exception ex)
-            {
-                // В случае ошибки обновляем строку состояния
-                toolStripStatusLabel1.Text = $"Ошибка подключения: {ex.Message}";
-                toolStripStatusLabel1.ForeColor = Color.Red;
-
-                // Скрываем прогресс-бар, если возникла ошибка
-                progressBarControl1.Visible = false;
-            }
-        }
-
-        // Метод для проверки подключения
-        private async Task<bool> TestDatabaseConnectionAsync()
-        {
-            try
-            {
-                // Используем SqlConnection для проверки подключения
-                using (var connection = new SqlConnection(ConfigHelper.GetConnectionString()))
-                {
-                    await connection.OpenAsync();
-                    return connection.State == System.Data.ConnectionState.Open;
-                }
-            }
-            catch
-            {
-                return false;
-            }
-        }
     }
 }
