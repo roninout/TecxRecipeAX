@@ -38,7 +38,7 @@ namespace TecxRecipeAX
         {
             await LoadDataAsync();
             ConfigureGridView();
-            // ConfigureParameterCellStyles(); // стилизация ячеек
+            ConfigureParameterCellStyles(); // стилизация ячеек
         }
 
         private async Task LoadDataAsync()
@@ -358,15 +358,15 @@ namespace TecxRecipeAX
         // настройки стилей ячеек
         private void ConfigureParameterCellStyles()
         { 
-            var colorProvider = new ParameterColorProvider(_baseParametersList);
+            //var colorProvider = new ParameterColorProvider(_baseParametersList);
 
             for (int i = 1; i <= ParameterCount; i++)
             {
                 string fieldName = $"Parameter{i}Name";
                 int columnIndex = i - 1;
 
-                gridViewStages.Columns[fieldName].AppearanceCell.BackColor = Color.White;
-                gridViewStages.Columns[fieldName].AppearanceCell.BackColor2 = Color.White;
+                //gridViewStages.Columns[fieldName].AppearanceCell.BackColor = Color.White;
+                //gridViewStages.Columns[fieldName].AppearanceCell.BackColor2 = Color.White;
 
                 gridViewStages.RowCellStyle += (sender, e) =>
                 {
@@ -377,10 +377,13 @@ namespace TecxRecipeAX
                             if (columnIndex < item.ParameterIds.Length)
                             {
                                 int? paramId = item.ParameterIds[columnIndex];
-                                var color = colorProvider.GetColor(paramId);
+                                //var color = colorProvider.GetColor(paramId);
 
-                                e.Appearance.BackColor = color;
-                                e.Appearance.BackColor2 = color;                                
+                                //e.Appearance.BackColor = color;
+                                //e.Appearance.BackColor2 = color;
+
+                                // Если параметр выбран (не null и не "Empty"), делаем текст жирным
+                                e.Appearance.Font = paramId.HasValue ? new Font(e.Appearance.Font, FontStyle.Bold) : new Font(e.Appearance.Font, FontStyle.Regular);
                             }
                         }
                     }
