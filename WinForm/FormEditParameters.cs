@@ -9,11 +9,15 @@ using System.Data.Entity;
 using System.ComponentModel;
 using DevExpress.XtraGrid.Columns;
 using System.Runtime.Remoting.Contexts;
+using System.Collections.Generic;
+using DevExpress.XtraGrid.Views.Base;
+using System.Drawing;
 
 namespace TecxRecipeAX
 {
     public partial class FormEditParameters : XtraForm
     {
+        private HashSet<int> _usedParameterIds;
         private RecipeDbContext _context;
         private BindingList<BaseParameter> _bindingList;
 
@@ -51,9 +55,12 @@ namespace TecxRecipeAX
                 gridViewParameters.SortInfo.Add(new DevExpress.XtraGrid.Columns.GridColumnSortInfo(gridViewParameters.Columns["type"], DevExpress.Data.ColumnSortOrder.Ascending));
 
                 // Устанавливаем информацию о количестве элементов в строке состояния
-                gridViewParameters.OptionsView.ShowFooter = true;
-                GridColumn colType = gridViewParameters.Columns["description"];
-                colType.Summary.Add(DevExpress.Data.SummaryItemType.Count, "description", "Total items: {0}");
+                //gridViewParameters.OptionsView.ShowFooter = true;
+                //GridColumn colType = gridViewParameters.Columns["description"];
+                //colType.Summary.Add(DevExpress.Data.SummaryItemType.Count, "description", "Total items: {0}");
+
+                LoadUsedParameterIds();
+                gridViewParameters.RefreshData();
             }
             catch (Exception ex)
             {
@@ -95,6 +102,22 @@ namespace TecxRecipeAX
             }
         }
 
+        // метод выделяет жирным используемые параметры
+        private void gridViewParameters_CustomDrawCell(object sender, RowCellCustomDrawEventArgs e)
+        {
+            if (_usedParameterIds == null) return;
+
+            var view = sender as GridView;
+            var parameter = view?.GetRow(e.RowHandle) as BaseParameter;
+            if (parameter == null) return;
+
+            // Только если параметр используется и колонка — type или name
+            if (_usedParameterIds.Contains(parameter.id) && (e.Column.FieldName == nameof(BaseParameter.type) || e.Column.FieldName == nameof(BaseParameter.name)))
+            {
+                e.Appearance.Font = new Font(e.Appearance.Font, FontStyle.Bold);
+            }
+        }
+
 
         #endregion
 
@@ -103,10 +126,13 @@ namespace TecxRecipeAX
         // Кнопка "Добавить параметр"
         private void btnAddParameter_Click(object sender, EventArgs e)
         {
+            // Находим первый свободный тип (минимальный отсутствующий)
+            var newType = Enumerable.Range(1, int.MaxValue).Except(_bindingList.Select(p => p.type)).First();
+
             var newParam = new BaseParameter
             {
                 name = "New parameter",
-                type = 0,
+                type = newType,
                 description = "Description"
             };
 
@@ -146,20 +172,31 @@ namespace TecxRecipeAX
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning
             );
-
             if (confirm != DialogResult.Yes)
                 return;
 
-            foreach (int rowHandle in selectedRows)
+            // Собираем параметры в список до удаления
+            var parametersToDelete = selectedRows
+                .Select(rowHandle => view.GetRow(rowHandle) as BaseParameter)
+                .Where(p => p != null)
+                .ToList();
+
+            // Удаляем из BindingList и контекста
+            foreach (var param in parametersToDelete)
             {
-                var param = view.GetRow(rowHandle) as BaseParameter;
-                if (param != null)
-                {
-                    _bindingList.Remove(param);
-                    _context.BaseParameters.Remove(param);
-                }
+                _bindingList.Remove(param);
+                _context.BaseParameters.Remove(param);
             }
             _context.SaveChanges();
+        }
+
+        // метод находит использованные параметры
+        private void LoadUsedParameterIds()
+        {
+            _usedParameterIds = _context.RecipeParameters
+                .Select(rp => rp.baseParameterId)
+                .Distinct()
+                .ToHashSet();
         }
 
         #endregion
