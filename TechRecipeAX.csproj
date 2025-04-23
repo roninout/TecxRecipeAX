@@ -136,6 +136,12 @@
     <Compile Include="WinForm\FormEditStages.Designer.cs">
       <DependentUpon>FormEditStages.cs</DependentUpon>
     </Compile>
+    <Compile Include="WinForm\RecipeEditForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="WinForm\RecipeEditForm.Designer.cs">
+      <DependentUpon>RecipeEditForm.cs</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -158,6 +164,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="WinForm\FormEditStages.resx">
       <DependentUpon>FormEditStages.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="WinForm\RecipeEditForm.resx">
+      <DependentUpon>RecipeEditForm.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

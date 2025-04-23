@@ -194,8 +194,16 @@ namespace TechRecipeAX
             }
         }
 
-        #endregion
+        // создание и редактирование рецептов
+        private void btnEditRecipe_Click(object sender, EventArgs e)
+        {
+            using (var form = new RecipeEditForm(_context))
+            {
+                form.ShowDialog();
+            }
+        }
 
+        #endregion
 
     }
 }

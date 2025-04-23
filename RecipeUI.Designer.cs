@@ -36,6 +36,7 @@
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
             this.btnEditStages = new DevExpress.XtraEditors.SimpleButton();
+            this.btnEditRecipe = new DevExpress.XtraEditors.SimpleButton();
             ((System.ComponentModel.ISupportInitialize)(this.gridControl1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.gridView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.progressBarControl1.Properties)).BeginInit();
@@ -45,8 +46,8 @@
             // btnEditParameters
             // 
             this.btnEditParameters.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnEditParameters.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("btnEditParameters.ImageOptions.SvgImage")));
-            this.btnEditParameters.Location = new System.Drawing.Point(807, 18);
+            this.btnEditParameters.ImageOptions.Image = ((System.Drawing.Image)(resources.GetObject("btnEditParameters.ImageOptions.Image")));
+            this.btnEditParameters.Location = new System.Drawing.Point(665, 18);
             this.btnEditParameters.Name = "btnEditParameters";
             this.btnEditParameters.Size = new System.Drawing.Size(136, 41);
             this.btnEditParameters.TabIndex = 0;
@@ -97,13 +98,24 @@
             // btnEditStages
             // 
             this.btnEditStages.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnEditStages.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("simpleButton1.ImageOptions.SvgImage")));
-            this.btnEditStages.Location = new System.Drawing.Point(949, 18);
+            this.btnEditStages.ImageOptions.Image = ((System.Drawing.Image)(resources.GetObject("btnEditStages.ImageOptions.Image")));
+            this.btnEditStages.Location = new System.Drawing.Point(807, 18);
             this.btnEditStages.Name = "btnEditStages";
             this.btnEditStages.Size = new System.Drawing.Size(136, 41);
             this.btnEditStages.TabIndex = 0;
             this.btnEditStages.Text = "Edit stages";
             this.btnEditStages.Click += new System.EventHandler(this.btnEditStages_Click);
+            // 
+            // btnEditRecipe
+            // 
+            this.btnEditRecipe.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnEditRecipe.ImageOptions.Image = ((System.Drawing.Image)(resources.GetObject("simpleButton1.ImageOptions.Image")));
+            this.btnEditRecipe.Location = new System.Drawing.Point(949, 18);
+            this.btnEditRecipe.Name = "btnEditRecipe";
+            this.btnEditRecipe.Size = new System.Drawing.Size(136, 41);
+            this.btnEditRecipe.TabIndex = 0;
+            this.btnEditRecipe.Text = "Edit recipe";
+            this.btnEditRecipe.Click += new System.EventHandler(this.btnEditRecipe_Click);
             // 
             // RecipeUI
             // 
@@ -113,6 +125,7 @@
             this.Controls.Add(this.statusStrip1);
             this.Controls.Add(this.progressBarControl1);
             this.Controls.Add(this.gridControl1);
+            this.Controls.Add(this.btnEditRecipe);
             this.Controls.Add(this.btnEditStages);
             this.Controls.Add(this.btnEditParameters);
             this.Name = "RecipeUI";
@@ -136,5 +149,6 @@
         private System.Windows.Forms.StatusStrip statusStrip1;
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel1;
         private DevExpress.XtraEditors.SimpleButton btnEditStages;
+        private DevExpress.XtraEditors.SimpleButton btnEditRecipe;
     }
 }
