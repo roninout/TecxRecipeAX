@@ -15,6 +15,7 @@ using System.Data.Entity;
 using DevExpress.XtraEditors.Controls;
 using DevExpress.XtraEditors.Repository;
 using System.Data.Entity.Infrastructure;
+using DevExpress.Utils.Svg;
 
 namespace TecxRecipeAX
 {
@@ -25,6 +26,7 @@ namespace TecxRecipeAX
         private List<BaseRecipeStage> baseRecipeStages;
         private List<Recipe> recipes;
         private Recipe selectedRecipe;
+        private bool _isEditingName = false;
 
         public event EventHandler DataUpdated;
 
@@ -153,6 +155,15 @@ namespace TecxRecipeAX
             }
         }
 
+        private void comboBoxRecipes_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (_isEditingName && e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                SaveEditedRecipeName();
+            }
+        }
+
         #endregion
 
         #region Buttons
@@ -215,7 +226,7 @@ namespace TecxRecipeAX
                 _context.SaveChanges();
 
                 selectedRecipe = null;
-                textBoxRecipeName.Text = "";
+                //textBoxRecipeName.Text = "";
 
                 // Обновляем интерфейс
                 LoadRecipesToCombobox();
@@ -293,33 +304,6 @@ namespace TecxRecipeAX
             MoveStage(1);
         }
 
-        // Изменение имени рецепта
-        private void btnSaveRecipeName_Click(object sender, EventArgs e)
-        {
-            if (selectedRecipe == null) return;
-
-            var newName = textBoxRecipeName.Text.Trim();
-            if (string.IsNullOrWhiteSpace(newName))
-            {
-                XtraMessageBox.Show("Имя рецепта не может быть пустым.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (_context.Recipes.Any(r => r.name == newName && r.id != selectedRecipe.id))
-            {
-                XtraMessageBox.Show("Рецепт с таким именем уже существует.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            selectedRecipe.name = newName;
-            _context.SaveChanges();
-
-            LoadRecipesToCombobox();
-            comboBoxRecipes.EditValue = selectedRecipe.id;
-
-            XtraMessageBox.Show("Имя рецепта обновлено.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
         // метод перемещения строки вверх/вниз
         private void MoveStage(int direction)
         {
@@ -368,6 +352,21 @@ namespace TecxRecipeAX
             MessageBox.Show("Параметры стадий обновлены из базовых стадий.", "Успешно", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
+        // кнопка редактирования имени рецепта
+        private void btnToggleEditName_Click(object sender, EventArgs e)
+        {
+            _isEditingName = !_isEditingName;
+            comboBoxRecipes.Properties.TextEditStyle = _isEditingName ? TextEditStyles.Standard : TextEditStyles.DisableTextEditor;
+    //        btnToggleEditName.ImageOptions.SvgImage = _isEditingName
+    //? SvgImages.Actions.Lock // условно, иконка "lock"
+    //: SvgImages.Programming.Edit; // условно, иконка "edit"
+
+            //comboBoxRecipes.Properties.ReadOnly = !_isEditingName;
+
+            if (_isEditingName)
+                comboBoxRecipes.Focus();
+        }
+
         #endregion
 
         #region Form
@@ -393,7 +392,6 @@ namespace TecxRecipeAX
             var sortedStages = selectedRecipe.RecipeStages.OrderBy(s => s.stageNumb).ToList();
             recipeStageBindingList = new BindingList<RecipeStage>(sortedStages);
             gridControlStages.DataSource = recipeStageBindingList;
-            textBoxRecipeName.Text = selectedRecipe.name;
 
             UpdateButtonsState();
         }
@@ -416,8 +414,6 @@ namespace TecxRecipeAX
 
             gridViewStages.Columns[nameof(RecipeStage.baseRecipeStageId)].ColumnEdit = stageLookup;
         }
-
-
 
         // метод синхронизирует параметры текущей стадии рецепта (RecipeStage) с параметрами базовой стадии (BaseRecipeStage)
         private void UpdateRecipeStageParameters(RecipeStage stage, BaseRecipeStage baseStage)
@@ -484,6 +480,36 @@ namespace TecxRecipeAX
             var stages = _context.RecipeStages.Where(s => s.recipeId == selectedRecipe.id).OrderBy(s => s.stageNumb).ToList();
             for (int i = 0; i < stages.Count; i++) stages[i].stageNumb = i + 1;
             _context.SaveChanges();
+        }
+
+        // сохранение имени рецепта
+        private void SaveEditedRecipeName()
+        {
+            if (selectedRecipe == null) return;
+
+            var newName = comboBoxRecipes.Text.Trim(); // Берем текст из LookUpEdit
+            if (string.IsNullOrWhiteSpace(newName))
+            {
+                XtraMessageBox.Show("Имя рецепта не может быть пустым.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (_context.Recipes.Any(r => r.name == newName && r.id != selectedRecipe.id))
+            {
+                XtraMessageBox.Show("Рецепт с таким именем уже существует.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            selectedRecipe.name = newName;
+            _context.SaveChanges();
+
+            LoadRecipesToCombobox();
+            comboBoxRecipes.EditValue = selectedRecipe.id;
+
+            XtraMessageBox.Show("Имя рецепта обновлено.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            _isEditingName = false;
+            comboBoxRecipes.Properties.TextEditStyle = TextEditStyles.DisableTextEditor;
         }
 
         #endregion

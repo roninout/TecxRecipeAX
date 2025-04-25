@@ -66,7 +66,7 @@ namespace TecxRecipeAX
         {
             gridViewStages.OptionsBehavior.Editable = true;
             gridViewStages.OptionsView.NewItemRowPosition = NewItemRowPosition.None;
-            gridViewStages.OptionsView.ShowGroupPanel = true;
+            gridViewStages.OptionsView.ShowGroupPanel = false;
 
             gridViewStages.OptionsSelection.MultiSelect = true;
             gridViewStages.OptionsSelection.MultiSelectMode = GridMultiSelectMode.RowSelect;
