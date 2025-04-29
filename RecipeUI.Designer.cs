@@ -32,7 +32,6 @@
             this.btnEditParameters = new DevExpress.XtraEditors.SimpleButton();
             this.gridControlStages = new DevExpress.XtraGrid.GridControl();
             this.gridViewStages = new DevExpress.XtraGrid.Views.Grid.GridView();
-            this.gridColumn1 = new DevExpress.XtraGrid.Columns.GridColumn();
             this.progressBarControl1 = new DevExpress.XtraEditors.ProgressBarControl();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
@@ -60,6 +59,9 @@
             // 
             // gridControlStages
             // 
+            this.gridControlStages.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.gridControlStages.Location = new System.Drawing.Point(16, 65);
             this.gridControlStages.MainView = this.gridViewStages;
             this.gridControlStages.Name = "gridControlStages";
@@ -70,21 +72,12 @@
             // 
             // gridViewStages
             // 
-            this.gridViewStages.Columns.AddRange(new DevExpress.XtraGrid.Columns.GridColumn[] {
-            this.gridColumn1});
             this.gridViewStages.GridControl = this.gridControlStages;
             this.gridViewStages.Name = "gridViewStages";
             this.gridViewStages.RowCellStyle += new DevExpress.XtraGrid.Views.Grid.RowCellStyleEventHandler(this.gridViewStages_RowCellStyle);
             this.gridViewStages.ShowingEditor += new System.ComponentModel.CancelEventHandler(this.gridViewStages_ShowingEditor);
             this.gridViewStages.CustomUnboundColumnData += new DevExpress.XtraGrid.Views.Base.CustomColumnDataEventHandler(this.GridViewStages_CustomUnboundColumnData);
             this.gridViewStages.ValidatingEditor += new DevExpress.XtraEditors.Controls.BaseContainerValidateEditorEventHandler(this.gridViewStages_ValidatingEditor);
-            // 
-            // gridColumn1
-            // 
-            this.gridColumn1.Caption = "gridColumn1";
-            this.gridColumn1.Name = "gridColumn1";
-            this.gridColumn1.Visible = true;
-            this.gridColumn1.VisibleIndex = 0;
             // 
             // progressBarControl1
             // 
@@ -193,6 +186,5 @@
         private DevExpress.XtraEditors.SimpleButton btnEditRecipe;
         private DevExpress.XtraEditors.SimpleButton btnRefreshRecipe;
         private DevExpress.XtraEditors.LookUpEdit lookUpEditRecipe;
-        private DevExpress.XtraGrid.Columns.GridColumn gridColumn1;
     }
 }
