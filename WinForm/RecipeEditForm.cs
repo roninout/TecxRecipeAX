@@ -107,6 +107,7 @@ namespace TecxRecipeAX
                 e.Handled = true;
             }
         }
+
         private void StageLookup_EditValueChanged(object sender, EventArgs e)
         {
             gridViewStages.PostEditor(); // Применяет значение в ячейку

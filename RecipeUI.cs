@@ -7,25 +7,15 @@ using System.Text;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using DevExpress.XtraEditors;
 using Microsoft.Win32;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using TecxRecipeAX;
 using System.Data.Entity;
-using System.Data.SqlClient;
-using DevExpress.Xpo.Logger;
-using System.Diagnostics;
-using System.IO;
 using DevExpress.XtraGrid.Views.Grid;
-using DevExpress.Data;
-using DevExpress.XtraEditors.Repository;
-using DevExpress.XtraExport.Helpers;
-using DevExpress.XtraGrid.Columns;
-using DevExpress.XtraGrid;
 using DevExpress.XtraGrid.Views.Base;
-using System.Globalization;
 using DevExpress.XtraEditors.Controls;
+using System.Globalization;
 
 namespace TechRecipeAX
 {
@@ -38,7 +28,8 @@ namespace TechRecipeAX
     public partial class RecipeUI : UserControl, ITechRecipeAX
     {
         private RecipeDbContext _context;
-        private BindingList<RecipeStage> recipeStageBindingList;
+        //private BindingList<RecipeStage> recipeStageBindingList;
+        private BindingList<StageGridItem> stageGridItems;
         private Recipe selectedRecipe;
 
         public RecipeUI()
@@ -140,117 +131,166 @@ namespace TechRecipeAX
         #endregion
 
         #region Table
-        // настройка таблицы
+        // настройка таблицы - общее поведение
         private void ConfigureGridView()
         {
-            gridViewStages.OptionsView.NewItemRowPosition = NewItemRowPosition.None;
+            gridViewStages.OptionsView.NewItemRowPosition = DevExpress.XtraGrid.Views.Grid.NewItemRowPosition.None;
+            gridViewStages.OptionsView.ColumnAutoWidth = false;
+            gridViewStages.OptionsView.ShowGroupPanel = true;
+
             gridViewStages.OptionsBehavior.Editable = true;
-            gridViewStages.OptionsView.ShowGroupPanel = false;
-            //gridViewStages.RowCellStyle += GridView1_RowCellStyle;
-            //gridViewStages.CellValueChanged += GridView1_CellValueChanged;
+            gridViewStages.OptionsBehavior.EditorShowMode = DevExpress.Utils.EditorShowMode.MouseDownFocused;
+            gridViewStages.OptionsBehavior.AllowAddRows = DevExpress.Utils.DefaultBoolean.False;
+            gridViewStages.OptionsBehavior.AllowDeleteRows = DevExpress.Utils.DefaultBoolean.False;
+
         }
 
-        private void CreateGridColumns(IEnumerable<RecipeStage> stages)
+        // инициализация колонок в таблице
+        private void CreateGridColumns(BindingList<StageGridItem> items)
         {
-            gridViewStages.Columns.Clear();
+            var gridView = gridViewStages;
+            gridView.Columns.Clear();
 
-            // Stage Number
-            gridViewStages.Columns.Add(new GridColumn
+            // Столбец №
+            var colStageNumb = gridView.Columns.AddVisible(nameof(StageGridItem.stageNumb), "№");
+            colStageNumb.OptionsColumn.AllowEdit = false;
+            colStageNumb.Width = 60;
+            colStageNumb.OptionsColumn.FixedWidth = true;
+
+            // Столбец Stage
+            var colStageName = gridView.Columns.AddVisible(nameof(StageGridItem.name), "Stage");
+            colStageName.OptionsColumn.AllowEdit = false;
+            colStageName.Width = 150;
+            colStageName.OptionsColumn.FixedWidth = true;
+
+            // Теперь динамические параметры
+            if (items.Any())
             {
-                FieldName = "stageNumb",
-                Caption = "#",
-                Visible = true,
-                Width = 50
-            });
+                var baseParameters = _context.BaseParameters.ToList(); // Загружаем BaseParameters один раз
+                var allParameters = items.SelectMany(item => item.Parameters.Keys).Distinct().ToList();
 
-            // Stage Name
-            gridViewStages.Columns.Add(new GridColumn
-            {
-                FieldName = "name",
-                Caption = "Stage",
-                Visible = true,
-                Width = 150,
-                OptionsColumn = { AllowEdit = false }
-            });
+                // Сортировка по BaseParameter.type
+                var sortedParameters = allParameters
+                    .Select(name => new
+                    {
+                        Name = name,
+                        Type = baseParameters.FirstOrDefault(p => p.name == name)?.type ?? int.MaxValue
+                    })
+                    .OrderBy(p => p.Type)
+                    .ThenBy(p => p.Name)
+                    .ToList();
 
-            // Unique parameters
-            var paramNames = stages.SelectMany(s => s.RecipeParameters).Select(p => p.name).Distinct().OrderBy(n => n);
-
-            foreach (var param in paramNames)
-            {
-                var column = new GridColumn
+                foreach (var param in sortedParameters)
                 {
-                    Caption = param,
-                    FieldName = param,
-                    UnboundType = UnboundColumnType.Decimal,
-                    Visible = true,
-                    Width = 100
-                };
-                column.OptionsColumn.AllowEdit = true;
-                column.ShowUnboundExpressionMenu = true;
-
-                gridViewStages.Columns.Add(column);
+                    var col = gridView.Columns.AddField(param.Name);
+                    col.Caption = param.Name;
+                    col.UnboundType = DevExpress.Data.UnboundColumnType.Decimal;
+                    col.Visible = true;
+                    col.DisplayFormat.FormatType = DevExpress.Utils.FormatType.Numeric;
+                    col.DisplayFormat.FormatString = "N2";
+                    col.Width = 100;
+                    col.OptionsColumn.FixedWidth = true;
+                }
             }
 
-            // Auto checkbox
-            gridViewStages.Columns.Add(new GridColumn
-            {
-                FieldName = "auto",
-                Caption = "Auto",
-                Visible = true,
-                ColumnEdit = new RepositoryItemCheckEdit()
-            });
+            var colStageAuto = gridView.Columns.AddVisible(nameof(StageGridItem.auto), "Auto");
+            colStageAuto.OptionsColumn.AllowEdit = false;
+            colStageAuto.Width = 60;
+            colStageAuto.OptionsColumn.FixedWidth = true;
+
+            //gridView.BestFitColumns();
         }
 
+        // событие отрисовки серых ячеек
         private void gridViewStages_RowCellStyle(object sender, RowCellStyleEventArgs e)
         {
-            if (!e.Column.FieldName.Equals("stageNumb") && !e.Column.FieldName.Equals("name") && !e.Column.FieldName.Equals("auto"))
+            if (e.RowHandle < 0) return;
+
+            var stageItem = gridViewStages.GetRow(e.RowHandle) as StageGridItem;
+
+            if (stageItem != null
+                && !e.Column.FieldName.Equals(nameof(StageGridItem.stageNumb))
+                && !e.Column.FieldName.Equals(nameof(StageGridItem.name))
+                && !e.Column.FieldName.Equals(nameof(StageGridItem.auto)))
             {
-                var stage = gridViewStages.GetRow(e.RowHandle) as RecipeStage;
-                if (stage != null)
+                bool hasParam = stageItem.Parameters.ContainsKey(e.Column.FieldName);
+
+                if (!hasParam)
                 {
-                    bool hasParam = stage.RecipeParameters.Any(p => p.name == e.Column.FieldName);
-                    if (!hasParam)
+                    e.Appearance.BackColor = SystemColors.Control; //Color.LightGray;
+                    e.Appearance.ForeColor = SystemColors.GrayText; //Color.DarkGray;
+                    e.Appearance.Options.UseBackColor = true;
+                    e.Appearance.Options.UseForeColor = true;
+                }
+            }
+        }
+
+        // события запрета ввода данных в серых ячейках
+        private void gridViewStages_ShowingEditor(object sender, CancelEventArgs e)
+        {
+            var view = sender as DevExpress.XtraGrid.Views.Grid.GridView;
+            if (view == null || view.FocusedRowHandle < 0 || view.FocusedColumn == null)
+                return;
+
+            var stageItem = view.GetRow(view.FocusedRowHandle) as StageGridItem;
+            if (stageItem == null)
+                return;
+
+            string fieldName = view.FocusedColumn.FieldName;
+
+            if (!fieldName.Equals(nameof(StageGridItem.stageNumb)) &&
+                !fieldName.Equals(nameof(StageGridItem.name)) &&
+                !fieldName.Equals(nameof(StageGridItem.auto)))
+            {
+                bool hasParam = stageItem.Parameters.ContainsKey(fieldName);
+
+                if (!hasParam)
+                {
+                    e.Cancel = true;  // ОТМЕНЯЕМ редактирование только этой ячейки!
+                }
+            }
+        }
+
+        // отлавливаем изменение параметров и сохраняем
+        private void GridViewStages_CustomUnboundColumnData(object sender, CustomColumnDataEventArgs e)
+        {
+            if (e.Row is StageGridItem stageItem && e.Column != null)
+            {
+                string paramName = e.Column.FieldName;
+
+                if (e.IsGetData)
+                {
+                    if (stageItem.Parameters.TryGetValue(paramName, out double value))
+                        e.Value = value;
+                }
+                else if (e.IsSetData)
+                {
+                    if (e.Value != null && double.TryParse(e.Value.ToString(), out double newValue))
                     {
-                        e.Appearance.BackColor = Color.LightGray;
-                        e.Appearance.ForeColor = Color.DarkGray;
-                        e.Column.OptionsColumn.AllowEdit = false;
+                        stageItem.Parameters[paramName] = newValue;
+                        SaveParameterValueToDatabase(stageItem.RecipeStageId, paramName, newValue);
                     }
                 }
             }
         }
 
-        private void gridViewStages_CellValueChanged(object sender, CellValueChangedEventArgs e)
+        // валидация ячеек параметров
+        private void gridViewStages_ValidatingEditor(object sender, BaseContainerValidateEditorEventArgs e)
         {
-            if (e.RowHandle < 0) return;
-
-            var stage = gridViewStages.GetRow(e.RowHandle) as RecipeStage;
-            if (stage == null || e.Column == null || selectedRecipe == null) return;
-
-            var paramName = e.Column.FieldName;
-            var paramValueStr = e.Value?.ToString()?.Replace(',', '.');
-
-            if (!double.TryParse(paramValueStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double value))
+            if (e.Value is string strValue)
             {
-                MessageBox.Show("Некорректное значение параметра.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                LoadRecipeStagesAndParameters(selectedRecipe.id);
-                return;
-            }
+                // Заменяем запятую на точку
+                string normalized = strValue.Replace(',', '.');
 
-            var baseParam = _context.BaseParameters.FirstOrDefault(bp => bp.name == paramName);
-            if (baseParam == null)
-            {
-                MessageBox.Show($"Базовый параметр '{paramName}' не найден.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            var parameter = _context.RecipeParameters.FirstOrDefault(p =>
-                p.recipeStageId == stage.id && p.baseParameterId == baseParam.id);
-
-            if (parameter != null)
-            {
-                parameter.value = value;
-                _context.SaveChanges();
+                if (double.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out double result))
+                {
+                    e.Value = result;
+                }
+                else
+                {
+                    e.Valid = false;
+                    e.ErrorText = "Введите числовое значение.";
+                }
             }
         }
 
@@ -391,28 +431,88 @@ namespace TechRecipeAX
         #endregion
 
         #region Stuff
+
         private void LoadRecipeStagesAndParameters(int recipeId)
         {
-            var recipe = _context.Recipes
-                .Include(r => r.RecipeStages.Select(rs => rs.RecipeParameters))
-                .FirstOrDefault(r => r.id == recipeId);
+            var recipe = _context.Recipes.Include(r => r.RecipeStages.Select(rs => rs.RecipeParameters)).FirstOrDefault(r => r.id == recipeId);
 
             if (recipe != null)
             {
+                selectedRecipe = recipe;
                 var sortedStages = recipe.RecipeStages.OrderBy(s => s.stageNumb).ToList();
-                recipeStageBindingList = new BindingList<RecipeStage>(sortedStages);
 
-                gridControlStages.DataSource = recipeStageBindingList;
-                CreateGridColumns(recipeStageBindingList);
+                stageGridItems = new BindingList<StageGridItem>();
+
+                foreach (var stage in sortedStages)
+                {
+                    var item = new StageGridItem
+                    {
+                        RecipeStageId = stage.id,
+                        stageNumb = stage.stageNumb,
+                        name = stage.name,
+                        auto = stage.auto
+                    };
+
+                    foreach (var param in stage.RecipeParameters)
+                    {
+                        item.Parameters[param.name] = param.value;
+                    }
+
+                    stageGridItems.Add(item);
+                }
+
+                gridControlStages.DataSource = stageGridItems;
+                CreateGridColumns(stageGridItems);
+                RefreshGridColumns();
             }
         }
 
+        // метод сохранения параметров
+        private void SaveParameterValueToDatabase(int recipeStageId, string paramName, double newValue)
+        {
+            var stage = _context.RecipeStages
+                .Include(rs => rs.RecipeParameters)
+                .FirstOrDefault(rs => rs.id == recipeStageId);
+
+            if (stage != null)
+            {
+                var param = stage.RecipeParameters.FirstOrDefault(p => p.name == paramName);
+                if (param != null)
+                {
+                    param.value = newValue;
+                    _context.SaveChanges();
+                }
+            }
+        }
+
+        // обновляем таблицу при смене рецепта
         private void RefreshData(int recipeId)
         {
             _context.Dispose();
             _context = new RecipeDbContext(ConfigHelper.GetConnectionString());
             LoadRecipeStagesAndParameters(recipeId);
+            RefreshGridColumns();
         }
+
+        // обновляем колонки - если их имена (параметры) изменились
+        private void RefreshGridColumns()
+        {
+            if (stageGridItems == null || stageGridItems.Count == 0)
+                return;
+
+            CreateGridColumns(stageGridItems);
+        }
+
         #endregion
+
+    }
+
+    public class StageGridItem
+    {
+        public int RecipeStageId { get; set; }
+        public int stageNumb { get; set; }
+        public string name { get; set; }
+        public bool auto { get; set; }
+        public Dictionary<string, double> Parameters { get; set; } = new Dictionary<string, double>();
     }
 }
