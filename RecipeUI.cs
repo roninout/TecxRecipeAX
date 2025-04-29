@@ -25,7 +25,7 @@ namespace TechRecipeAX
     [ComDefaultInterface(typeof(ITechRecipeAX))]
     [ComSourceInterfaces(typeof(ITechRecipeAXEvents))]
 
-    public partial class RecipeUI : UserControl, ITechRecipeAX
+    public partial class RecipeUI : DevExpress.XtraEditors.XtraUserControl, ITechRecipeAX
     {
         private RecipeDbContext _context;
         //private BindingList<RecipeStage> recipeStageBindingList;
