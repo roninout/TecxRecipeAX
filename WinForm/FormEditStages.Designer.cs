@@ -35,8 +35,8 @@
             this.gridColumn2 = new DevExpress.XtraGrid.Columns.GridColumn();
             this.gridColumn3 = new DevExpress.XtraGrid.Columns.GridColumn();
             this.btnDeleteStage = new DevExpress.XtraEditors.SimpleButton();
-            this.btnAddStage = new DevExpress.XtraEditors.SimpleButton();
             this.FormEditStageslayoutControl1ConvertedLayout = new DevExpress.XtraLayout.LayoutControl();
+            this.btnAddStage = new DevExpress.XtraEditors.SimpleButton();
             this.layoutControlGroup1 = new DevExpress.XtraLayout.LayoutControlGroup();
             this.btnDeleteStageitem = new DevExpress.XtraLayout.LayoutControlItem();
             this.btnAddStageitem = new DevExpress.XtraLayout.LayoutControlItem();
@@ -90,7 +90,7 @@
             this.gridColumn2.OptionsColumn.FixedWidth = true;
             this.gridColumn2.Visible = true;
             this.gridColumn2.VisibleIndex = 0;
-            this.gridColumn2.Width = 160;
+            this.gridColumn2.Width = 250;
             // 
             // gridColumn3
             // 
@@ -98,8 +98,6 @@
             this.gridColumn3.FieldName = "description";
             this.gridColumn3.Name = "gridColumn3";
             this.gridColumn3.OptionsColumn.FixedWidth = true;
-            this.gridColumn3.Visible = true;
-            this.gridColumn3.VisibleIndex = 1;
             this.gridColumn3.Width = 200;
             // 
             // btnDeleteStage
@@ -114,18 +112,6 @@
             this.btnDeleteStage.Text = "Remove";
             this.btnDeleteStage.Click += new System.EventHandler(this.btnDeleteStage_Click);
             // 
-            // btnAddStage
-            // 
-            this.btnAddStage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnAddStage.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("btnAddStage.ImageOptions.SvgImage")));
-            this.btnAddStage.Location = new System.Drawing.Point(12, 12);
-            this.btnAddStage.Name = "btnAddStage";
-            this.btnAddStage.Size = new System.Drawing.Size(116, 36);
-            this.btnAddStage.StyleController = this.FormEditStageslayoutControl1ConvertedLayout;
-            this.btnAddStage.TabIndex = 3;
-            this.btnAddStage.Text = "Add";
-            this.btnAddStage.Click += new System.EventHandler(this.btnAddStage_Click);
-            // 
             // FormEditStageslayoutControl1ConvertedLayout
             // 
             this.FormEditStageslayoutControl1ConvertedLayout.Controls.Add(this.btnDeleteStage);
@@ -138,6 +124,18 @@
             this.FormEditStageslayoutControl1ConvertedLayout.Root = this.layoutControlGroup1;
             this.FormEditStageslayoutControl1ConvertedLayout.Size = new System.Drawing.Size(1238, 601);
             this.FormEditStageslayoutControl1ConvertedLayout.TabIndex = 4;
+            // 
+            // btnAddStage
+            // 
+            this.btnAddStage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnAddStage.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("btnAddStage.ImageOptions.SvgImage")));
+            this.btnAddStage.Location = new System.Drawing.Point(12, 12);
+            this.btnAddStage.Name = "btnAddStage";
+            this.btnAddStage.Size = new System.Drawing.Size(116, 36);
+            this.btnAddStage.StyleController = this.FormEditStageslayoutControl1ConvertedLayout;
+            this.btnAddStage.TabIndex = 3;
+            this.btnAddStage.Text = "Add";
+            this.btnAddStage.Click += new System.EventHandler(this.btnAddStage_Click);
             // 
             // layoutControlGroup1
             // 

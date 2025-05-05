@@ -6,7 +6,6 @@ using System.Data;
 using System.Text;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 using Microsoft.Win32;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -16,6 +15,8 @@ using DevExpress.XtraGrid.Views.Grid;
 using DevExpress.XtraGrid.Views.Base;
 using DevExpress.XtraEditors.Controls;
 using System.Globalization;
+using static DevExpress.Utils.Svg.CommonSvgImages;
+using DevExpress.XtraGrid.Columns;
 
 namespace TechRecipeAX
 {
@@ -110,7 +111,7 @@ namespace TechRecipeAX
                 {
                     currentItem++;
                     progressBarControl1.EditValue = (int)((double)currentItem / totalItems * 100);
-                    await Task.Delay(10);
+                    await Task.Delay(5);
                 }
 
                 progressBarControl1.Visible = false;
@@ -143,6 +144,13 @@ namespace TechRecipeAX
             gridViewStages.OptionsBehavior.AllowAddRows = DevExpress.Utils.DefaultBoolean.False;
             gridViewStages.OptionsBehavior.AllowDeleteRows = DevExpress.Utils.DefaultBoolean.False;
 
+            //gridViewStages.Appearance.Row.TextOptions.WordWrap = DevExpress.Utils.WordWrap.Wrap;
+            //gridViewStages.OptionsView.RowAutoHeight = true;
+
+            gridViewStages.OptionsView.ColumnHeaderAutoHeight = DevExpress.Utils.DefaultBoolean.True;
+            gridViewStages.Appearance.HeaderPanel.TextOptions.WordWrap = DevExpress.Utils.WordWrap.Wrap;
+            gridViewStages.Appearance.HeaderPanel.Font = new Font(gridViewStages.Appearance.HeaderPanel.Font, FontStyle.Bold);
+            gridViewStages.Appearance.HeaderPanel.TextOptions.HAlignment = DevExpress.Utils.HorzAlignment.Center;            
         }
 
         // инициализация колонок в таблице
@@ -154,12 +162,13 @@ namespace TechRecipeAX
             // Столбец №
             var colStageNumb = gridView.Columns.AddVisible(nameof(StageGridItem.stageNumb), "№");
             colStageNumb.OptionsColumn.AllowEdit = false;
-            colStageNumb.Width = 60;
+            colStageNumb.Width = 30;
             colStageNumb.OptionsColumn.FixedWidth = true;
 
             // Столбец Stage
-            var colStageName = gridView.Columns.AddVisible(nameof(StageGridItem.name), "Stage");
-            colStageName.OptionsColumn.AllowEdit = false;
+            var colStageName = gridView.Columns.AddVisible(nameof(StageGridItem.name), "Стадія");
+            colStageName.OptionsColumn.AllowEdit = true;
+            colStageName.UnboundType = DevExpress.Data.UnboundColumnType.String;
             colStageName.Width = 150;
             colStageName.OptionsColumn.FixedWidth = true;
 
@@ -171,19 +180,26 @@ namespace TechRecipeAX
 
                 // Сортировка по BaseParameter.type
                 var sortedParameters = allParameters
-                    .Select(name => new
+                .Select(name =>
+                {
+                    var paramInfo = baseParameters.FirstOrDefault(p => p.name == name);
+                    return new
                     {
                         Name = name,
-                        Type = baseParameters.FirstOrDefault(p => p.name == name)?.type ?? int.MaxValue
-                    })
-                    .OrderBy(p => p.Type)
-                    .ThenBy(p => p.Name)
-                    .ToList();
+                        Type = paramInfo?.type ?? int.MaxValue,
+                        Description = paramInfo?.description ?? ""
+                    };
+                })
+                .OrderBy(p => p.Type)
+                .ThenBy(p => p.Name)
+                .ToList();
 
                 foreach (var param in sortedParameters)
                 {
+                    var description = (param.Description ?? "").Replace("\\n", Environment.NewLine);
+
                     var col = gridView.Columns.AddField(param.Name);
-                    col.Caption = param.Name;
+                    col.Caption = param.Name + Environment.NewLine + description;
                     col.UnboundType = DevExpress.Data.UnboundColumnType.Decimal;
                     col.Visible = true;
                     col.DisplayFormat.FormatType = DevExpress.Utils.FormatType.Numeric;
@@ -194,10 +210,13 @@ namespace TechRecipeAX
             }
 
             var colStageAuto = gridView.Columns.AddVisible(nameof(StageGridItem.auto), "Auto");
-            colStageAuto.OptionsColumn.AllowEdit = false;
+            colStageAuto.OptionsColumn.AllowEdit = true;
             colStageAuto.Width = 60;
             colStageAuto.OptionsColumn.FixedWidth = true;
 
+            // отображение значений в ячейках по центру, кроме колонки "name"
+            foreach (GridColumn column in gridViewStages.Columns)
+                column.AppearanceCell.TextOptions.HAlignment = column.FieldName != "name" ? DevExpress.Utils.HorzAlignment.Center : DevExpress.Utils.HorzAlignment.Default;
             //gridView.BestFitColumns();
         }
 
@@ -209,7 +228,7 @@ namespace TechRecipeAX
             var stageItem = gridViewStages.GetRow(e.RowHandle) as StageGridItem;
 
             if (stageItem != null
-                && !e.Column.FieldName.Equals(nameof(StageGridItem.stageNumb))
+                //&& !e.Column.FieldName.Equals(nameof(StageGridItem.stageNumb))
                 && !e.Column.FieldName.Equals(nameof(StageGridItem.name))
                 && !e.Column.FieldName.Equals(nameof(StageGridItem.auto)))
             {
@@ -223,6 +242,8 @@ namespace TechRecipeAX
                     e.Appearance.Options.UseForeColor = true;
                 }
             }
+
+            //e.Appearance.Font = new Font(e.Appearance.Font, FontStyle.Bold);
         }
 
         // события запрета ввода данных в серых ячейках
@@ -277,20 +298,55 @@ namespace TechRecipeAX
         // валидация ячеек параметров
         private void gridViewStages_ValidatingEditor(object sender, BaseContainerValidateEditorEventArgs e)
         {
-            if (e.Value is string strValue)
-            {
-                // Заменяем запятую на точку
-                string normalized = strValue.Replace(',', '.');
+            var view = sender as GridView;
+            if (view == null) return;
 
-                if (double.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out double result))
+            string fieldName = view.FocusedColumn?.FieldName;
+            // Разрешаем редактирование текстового имени без числовой валидации
+            if (fieldName == "name")
+            {
+                e.Valid = true;
+            }
+            else
+            {
+                if (e.Value is string strValue)
                 {
-                    e.Value = result;
+                    // Заменяем запятую на точку
+                    string normalized = strValue.Replace(',', '.');
+
+                    if (double.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out double result))
+                    {
+                        e.Value = result;
+                    }
+                    else
+                    {
+                        e.Valid = false;
+                        e.ErrorText = "Введите числовое значение.";
+                    }
                 }
-                else
-                {
-                    e.Valid = false;
-                    e.ErrorText = "Введите числовое значение.";
-                }
+            }
+        }
+
+        // событие для отлавливание изменений в колоках auto и name
+        private void gridViewStages_CellValueChanged(object sender, CellValueChangedEventArgs e)
+        {
+            // Проверяем, что изменена колонка 'auto'
+            if (e.Column.FieldName == "auto")
+            {
+                var item = stageGridItems[e.RowHandle];
+                item.auto = (bool)e.Value;  // Обновляем значение 'auto' в StageGridItem
+
+                // Сохраняем изменения в базе данных
+                SaveStageAutoToDatabase(item.RecipeStageId, item.auto);
+            }
+            // Проверяем, что изменена колонка 'name'
+            else if (e.Column.FieldName == "name")
+            {
+                var item = stageGridItems[e.RowHandle];
+                item.name = (string)e.Value;  // Обновляем значение 'name' в StageGridItem
+
+                // Сохраняем изменения в базе данных
+                SaveStageNameToDatabase(item.RecipeStageId, item.name);
             }
         }
 
@@ -428,6 +484,15 @@ namespace TechRecipeAX
                 RefreshData(selectedRecipe.id);
         }
 
+        // Отображение логов и CtApi
+        private void btnDebug_Click(object sender, EventArgs e)
+        {
+            using (var form = new FormDebug(_context))
+            {
+                form.ShowDialog();
+            }
+        }
+
         #endregion
 
         #region Stuff
@@ -482,6 +547,30 @@ namespace TechRecipeAX
                     param.value = newValue;
                     _context.SaveChanges();
                 }
+            }
+        }
+
+        // метод сохраняет изменения в колонке auto
+        private void SaveStageAutoToDatabase(int recipeStageId, bool newAutoValue)
+        {
+            var stage = _context.RecipeStages.FirstOrDefault(rs => rs.id == recipeStageId);
+
+            if (stage != null)
+            {
+                stage.auto = newAutoValue;
+                _context.SaveChanges();
+            }
+        }
+
+        // метод сохраняет изменения в колонке name
+        private void SaveStageNameToDatabase(int recipeStageId, string newName)
+        {
+            var stage = _context.RecipeStages.FirstOrDefault(rs => rs.id == recipeStageId);
+
+            if (stage != null)
+            {
+                stage.name = newName;
+                _context.SaveChanges();
             }
         }
 

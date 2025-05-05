@@ -49,7 +49,7 @@ namespace TecxRecipeAX
                 var stages = await _context.BaseRecipeStages.Include(s => s.BaseParameters).ToListAsync();
 
                 _bindingList = new BindingList<StageGridItem>(stages.Select(s => ConvertToGridItem(s)).ToList());
-                _bindingList.ListChanged += BindingList_ListChanged;
+                _bindingList.ListChanged += BindingList_ListChanged; // вызывается при добавлении новой стадии
                 gridControlStages.DataSource = _bindingList;
             }
             catch (Exception ex)
@@ -76,11 +76,17 @@ namespace TecxRecipeAX
             {
                 var column = gridViewStages.Columns.AddVisible($"Parameter{i}Name", $"Parameter {i}");
                 column.ColumnEdit = CreateParameterRepository();
-                column.Width = 120;
+                column.Width = 250;
             }
+
+            var colDescription = gridViewStages.Columns.AddVisible(nameof(StageGridItem.description), "Description");
+            colDescription.OptionsColumn.AllowEdit = true;
+            colDescription.Width = 150;
+            colDescription.OptionsColumn.FixedWidth = false;
 
             // Сортировка по имени
             gridViewStages.SortInfo.Add(new GridColumnSortInfo(gridViewStages.Columns["name"], DevExpress.Data.ColumnSortOrder.Ascending));
+            //gridViewStages.BestFitColumns();
         }
 
         // создаем ComboBox в ячейке параметров
@@ -270,7 +276,7 @@ namespace TecxRecipeAX
             {
                 var stage = await _context.BaseRecipeStages
                     .Include(s => s.BaseParameters)
-                    .FirstOrDefaultAsync(s => s.name == item.name);
+                    .FirstOrDefaultAsync(s => s.id == item.id);
 
                 if (stage == null)
                 {
@@ -284,6 +290,8 @@ namespace TecxRecipeAX
                 }
 
                 stage.description = item.description;
+                stage.name = item.name;
+
                 stage.BaseParameters.Clear();
 
                 foreach (var paramId in item.ParameterIds.Where(id => id.HasValue))

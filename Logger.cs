@@ -1,21 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TechRecipeAX
 {
     public static class Logger
     {
-        private static readonly string logFilePath = $"{Assembly.GetExecutingAssembly().Location}.log.txt";
+        public static readonly string logFilePath = $"{Assembly.GetExecutingAssembly().Location}.log.txt";
         //private static readonly string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log.txt");
 
         public static void Info(string message) => WriteLog("INFO", message);
         public static void Debug(string message) => WriteLog("DEBUG", message);
         public static void Error(string message) => WriteLog("ERROR", message);
+        public static void Trace(string message) => WriteLog("TRACE", message);
+        public static void Warning(string message) => WriteLog("WARNING", message);
 
         private static void WriteLog(string level, string message)
         {

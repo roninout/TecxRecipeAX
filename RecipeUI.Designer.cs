@@ -39,6 +39,7 @@
             this.btnEditRecipe = new DevExpress.XtraEditors.SimpleButton();
             this.btnRefreshRecipe = new DevExpress.XtraEditors.SimpleButton();
             this.lookUpEditRecipe = new DevExpress.XtraEditors.LookUpEdit();
+            this.btnDebug = new DevExpress.XtraEditors.SimpleButton();
             ((System.ComponentModel.ISupportInitialize)(this.gridControlStages)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.gridViewStages)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.progressBarControl1.Properties)).BeginInit();
@@ -76,11 +77,14 @@
             this.gridViewStages.Name = "gridViewStages";
             this.gridViewStages.RowCellStyle += new DevExpress.XtraGrid.Views.Grid.RowCellStyleEventHandler(this.gridViewStages_RowCellStyle);
             this.gridViewStages.ShowingEditor += new System.ComponentModel.CancelEventHandler(this.gridViewStages_ShowingEditor);
+            this.gridViewStages.CellValueChanged += new DevExpress.XtraGrid.Views.Base.CellValueChangedEventHandler(this.gridViewStages_CellValueChanged);
             this.gridViewStages.CustomUnboundColumnData += new DevExpress.XtraGrid.Views.Base.CustomColumnDataEventHandler(this.GridViewStages_CustomUnboundColumnData);
             this.gridViewStages.ValidatingEditor += new DevExpress.XtraEditors.Controls.BaseContainerValidateEditorEventHandler(this.gridViewStages_ValidatingEditor);
             // 
             // progressBarControl1
             // 
+            this.progressBarControl1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.progressBarControl1.Location = new System.Drawing.Point(16, 575);
             this.progressBarControl1.Name = "progressBarControl1";
             this.progressBarControl1.Properties.ShowTitle = true;
@@ -148,11 +152,21 @@
             this.lookUpEditRecipe.TabIndex = 4;
             this.lookUpEditRecipe.EditValueChanged += new System.EventHandler(this.lookUpEditRecipe_EditValueChanged);
             // 
+            // btnDebug
+            // 
+            this.btnDebug.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnDebug.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("simpleButton1.ImageOptions.SvgImage")));
+            this.btnDebug.Location = new System.Drawing.Point(450, 18);
+            this.btnDebug.Name = "btnDebug";
+            this.btnDebug.Size = new System.Drawing.Size(136, 40);
+            this.btnDebug.TabIndex = 0;
+            this.btnDebug.Text = "Debug";
+            this.btnDebug.Click += new System.EventHandler(this.btnDebug_Click);
+            // 
             // RecipeUI
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackColor = System.Drawing.SystemColors.ActiveBorder;
             this.Controls.Add(this.lookUpEditRecipe);
             this.Controls.Add(this.statusStrip1);
             this.Controls.Add(this.progressBarControl1);
@@ -160,6 +174,7 @@
             this.Controls.Add(this.btnEditRecipe);
             this.Controls.Add(this.btnEditStages);
             this.Controls.Add(this.btnRefreshRecipe);
+            this.Controls.Add(this.btnDebug);
             this.Controls.Add(this.btnEditParameters);
             this.Name = "RecipeUI";
             this.Size = new System.Drawing.Size(1101, 616);
@@ -186,5 +201,6 @@
         private DevExpress.XtraEditors.SimpleButton btnEditRecipe;
         private DevExpress.XtraEditors.SimpleButton btnRefreshRecipe;
         private DevExpress.XtraEditors.LookUpEdit lookUpEditRecipe;
+        private DevExpress.XtraEditors.SimpleButton btnDebug;
     }
 }
