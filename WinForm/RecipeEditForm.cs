@@ -2,20 +2,13 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
-using System.Drawing;
-using System.Text;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using DevExpress.XtraEditors;
 using TechRecipeAX;
-using DevExpress.XtraGrid.Columns;
-using DevExpress.XtraGrid.Views.Grid;
 using System.Data.Entity;
 using DevExpress.XtraEditors.Controls;
 using DevExpress.XtraEditors.Repository;
-using System.Data.Entity.Infrastructure;
-using DevExpress.Utils.Svg;
 
 namespace TecxRecipeAX
 {
@@ -368,6 +361,87 @@ namespace TecxRecipeAX
                 comboBoxRecipes.Focus();
         }
 
+        // обработчик события нажатия кнопки для копирования рецепта
+        private void btnCopyRecipe_Click(object sender, EventArgs e)
+        {
+            CopyRecipe();
+        }
+
+        // метод для копирования рецепта
+        private void CopyRecipe()
+        {
+            if (selectedRecipe == null)
+            {
+                XtraMessageBox.Show("Выберите рецепт для копирования.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                // Генерация нового имени для копии
+                string baseName = selectedRecipe.name;
+                string newName = $"{baseName} - copy 1";
+
+                int copyCount = 1;
+                while (_context.Recipes.Any(r => r.name == newName)) // Проверка на уникальность имени
+                {
+                    copyCount++;
+                    newName = $"{baseName} - copy {copyCount}";
+                }
+
+                // Создаем новый рецепт
+                var newRecipe = new Recipe
+                {
+                    name = newName
+                };
+
+                _context.Recipes.Add(newRecipe);
+                _context.SaveChanges(); // Сохраняем, чтобы получить новый id для рецепта
+
+                // Копируем стадии и параметры
+                var stagesToCopy = selectedRecipe.RecipeStages.ToList();
+                foreach (var stage in stagesToCopy)
+                {
+                    var newStage = new RecipeStage
+                    {
+                        recipeId = newRecipe.id,
+                        name = stage.name,
+                        description = stage.description,
+                        baseRecipeStageId = stage.baseRecipeStageId,
+                        stageNumb = stage.stageNumb // возможно, нужно будет скорректировать порядковый номер
+                    };
+
+                    _context.RecipeStages.Add(newStage);
+                    _context.SaveChanges(); // Сохраняем стадию, чтобы получить id
+
+                    // Копируем параметры для этой стадии
+                    var parametersToCopy = stage.RecipeParameters.Select(p => new RecipeParameter
+                    {
+                        recipeStageId = newStage.id,
+                        baseParameterId = p.baseParameterId,
+                        name = p.name,
+                        description = p.description,
+                        value = p.value,
+                        active = p.active
+                    }).ToList();
+
+                    _context.RecipeParameters.AddRange(parametersToCopy);
+                }
+
+                _context.SaveChanges(); // Сохраняем изменения
+
+                // Обновляем интерфейс
+                LoadRecipesToCombobox();
+                comboBoxRecipes.EditValue = newRecipe.id;
+
+                XtraMessageBox.Show($"Рецепт \"{baseName}\" успешно скопирован как \"{newName}\".", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при копировании рецепта: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         #endregion
 
         #region Form
@@ -514,5 +588,6 @@ namespace TecxRecipeAX
         }
 
         #endregion
+
     }
 }
