@@ -24,6 +24,7 @@ namespace TecxRecipeAX
         private CtApi _ctApi;
 
         private string tagRead;
+        private string _lastReadLogLine = null;
 
         public FormDebug(RecipeDbContext context)
 		{
@@ -33,31 +34,11 @@ namespace TecxRecipeAX
             _logFilePath = Logger.logFilePath;
             _ctApi = new CtApi();
 
-            LoadLogs();
+            Shown += async (_, __) => await LoadLogsWithColorsAsync();
             InitCtApi();
-            //StartAutoRefresh();
         }
 
-        private void LoadLogs()
-        {
-
-            if (File.Exists(_logFilePath))
-            {
-                textBoxLogs.Text = File.ReadAllText(_logFilePath);
-            }
-            else
-            {
-                textBoxLogs.Text = "Файл логов не найден.";
-            }
-        }
-
-        private void StartAutoRefresh()
-        {
-            _refreshTimer = new Timer();
-            _refreshTimer.Interval = 3000; // каждые 3 секунды
-            _refreshTimer.Tick += (s, e) => LoadLogs();
-            _refreshTimer.Start();
-        }
+        #region CtApi
 
         private void InitCtApi()
         {
@@ -65,6 +46,8 @@ namespace TecxRecipeAX
             _ctApi.SetCtApiDirectory(@"D:\AVEVA\AVEVA Plant SCADA\Bin\Bin (x64)");
             _ctApi.OpenAsync("192.168.15.5", "Al", "kip12345");
         }
+
+        #endregion
 
         #region Form
 
@@ -81,7 +64,7 @@ namespace TecxRecipeAX
         private async void btnTagRead_Click(object sender, EventArgs e)
         {
             var sTagName = textEditTagName.Text;
-            //var sTagName = tagRead;
+
             if (string.IsNullOrWhiteSpace(sTagName))
             {
                 MessageBox.Show("Выберите тег из списка.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -92,13 +75,11 @@ namespace TecxRecipeAX
             {
                 var value = await _ctApi.TagReadAsync(sTagName);
                 textEditTagValue.Text = value;
+                await LoadLogsWithColorsAsync(loadAll: false);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                //MessageBox.Show($"Ошибка чтения тега: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                var value = await _ctApi.TagReadAsync(sTagName);
-                textEditTagValue.Text = value;
-                throw;
+
             }
         }
 
@@ -109,17 +90,12 @@ namespace TecxRecipeAX
             try
             {
                 await _ctApi.TagWriteAsync(sTagName, value);
+                await LoadLogsWithColorsAsync(loadAll: false);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Ошибка записи тега: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-
-
-
-
-            //var value = textEditTagValue.Text;
-            //_ctApi.TagWriteAsync(sTagName, value);
         }
 
         private async void btnFind_Click(object sender, EventArgs e)
@@ -143,19 +119,124 @@ namespace TecxRecipeAX
             foreach (var value in values)
             {
                 await _ctApi.TagReadAsync(value.Value.ToString());
+                //await Task.Delay(10);
             }
 
             if (values.Count > 0)
                 lookUpEditFindResult.EditValue = values.First().Value;
+
+            await LoadLogsWithColorsAsync(loadAll: false);
         }
 
 
         #endregion
+
+        #region LookUpEdit
 
         private void lookUpEditFindResult_EditValueChanged(object sender, EventArgs e)
         {
             tagRead = lookUpEditFindResult.EditValue as string;
             textEditTagName.EditValue = tagRead;
         }
+
+        #endregion
+
+        #region Logger
+
+        private async Task LoadLogsWithColorsAsync(bool loadAll = true)
+        {
+            if (loadAll)
+                richTextBoxLogs.Text = "ЗАГРУЗКА данных...";
+
+            var linesWithColors = await ReadAndFormatLogLinesAsync(loadAll);
+            await Task.Delay(100); // позволяет UI обновить "ЗАГРУЗКА данных"
+
+            if (loadAll)
+            {
+                richTextBoxLogs.Clear();
+                richTextBoxLogs.SuspendLayout();
+            }
+
+            var sb = new StringBuilder();
+            Color currentColor = linesWithColors.FirstOrDefault().color;
+
+            foreach (var (line, color) in linesWithColors)
+            {
+                if (color == currentColor)
+                {
+                    sb.AppendLine(line);
+                }
+                else
+                {
+                    AppendTextWithColor(sb.ToString(), currentColor);
+                    sb.Clear();
+                    sb.AppendLine(line);
+                    currentColor = color;
+                }
+            }
+
+            if (sb.Length > 0)
+                AppendTextWithColor(sb.ToString(), currentColor);
+
+            if (loadAll)
+                richTextBoxLogs.ResumeLayout();
+        }
+
+        private Color GetLineColor(string line)
+        {
+            if (line.Contains("[ERROR]")) return Color.Red;
+            if (line.Contains("[WARNING]")) return Color.DarkOrange;
+            if (line.Contains("[DEBUG]")) return Color.Gray;
+            if (line.Contains("[TRACE]")) return Color.DarkGreen;
+            return Color.Black; // INFO и прочее
+        }
+
+        private async Task<List<(string line, Color color)>> ReadAndFormatLogLinesAsync(bool readAll = true)
+        {
+            return await Task.Run(() =>
+            {
+                var formattedLines = new List<(string line, Color color)>();
+
+                if (!File.Exists(_logFilePath))
+                {
+                    formattedLines.Add(("Файл логов не найден.", Color.Black));
+                    return formattedLines;
+                }
+
+                var lines = File.ReadLines(_logFilePath).Reverse();
+
+                foreach (var line in lines)
+                {
+                    if (!readAll)
+                    {
+                        // Прекращаем считывание, как только нашли последнюю строку из предыдущего чтения
+                        if (line == _lastReadLogLine)
+                            break;
+                    }
+
+                    var color = GetLineColor(line);
+                    formattedLines.Add((line, color));
+                }
+
+                // Сохраняем последнюю считанную строку (верхнюю в логе)
+                if (formattedLines.Count > 0)
+                {
+                    _lastReadLogLine = formattedLines.First().line;
+                }
+
+                return formattedLines;
+            });
+        }
+
+        private void AppendTextWithColor(string text, Color color)
+        {
+            richTextBoxLogs.SelectionStart = richTextBoxLogs.TextLength;
+            richTextBoxLogs.SelectionLength = 0;
+            richTextBoxLogs.SelectionColor = color;
+            richTextBoxLogs.AppendText(text);
+            richTextBoxLogs.SelectionColor = richTextBoxLogs.ForeColor; // сброс цвета
+        }
+
+        #endregion
     }
 }

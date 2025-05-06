@@ -28,29 +28,17 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.textBoxLogs = new System.Windows.Forms.TextBox();
             this.textEditTagName = new DevExpress.XtraEditors.TextEdit();
             this.textEditTagValue = new DevExpress.XtraEditors.TextEdit();
             this.btnTagRead = new DevExpress.XtraEditors.SimpleButton();
             this.btnTagWrite = new DevExpress.XtraEditors.SimpleButton();
             this.btnFind = new DevExpress.XtraEditors.SimpleButton();
             this.lookUpEditFindResult = new DevExpress.XtraEditors.LookUpEdit();
+            this.richTextBoxLogs = new System.Windows.Forms.RichTextBox();
             ((System.ComponentModel.ISupportInitialize)(this.textEditTagName.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.textEditTagValue.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.lookUpEditFindResult.Properties)).BeginInit();
             this.SuspendLayout();
-            // 
-            // textBoxLogs
-            // 
-            this.textBoxLogs.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.textBoxLogs.Location = new System.Drawing.Point(12, 109);
-            this.textBoxLogs.Multiline = true;
-            this.textBoxLogs.Name = "textBoxLogs";
-            this.textBoxLogs.ReadOnly = true;
-            this.textBoxLogs.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.textBoxLogs.Size = new System.Drawing.Size(654, 275);
-            this.textBoxLogs.TabIndex = 0;
             // 
             // textEditTagName
             // 
@@ -105,18 +93,29 @@
             this.lookUpEditFindResult.TabIndex = 5;
             this.lookUpEditFindResult.EditValueChanged += new System.EventHandler(this.lookUpEditFindResult_EditValueChanged);
             // 
+            // richTextBoxLogs
+            // 
+            this.richTextBoxLogs.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.richTextBoxLogs.Location = new System.Drawing.Point(12, 120);
+            this.richTextBoxLogs.Name = "richTextBoxLogs";
+            this.richTextBoxLogs.Size = new System.Drawing.Size(654, 264);
+            this.richTextBoxLogs.TabIndex = 6;
+            this.richTextBoxLogs.Text = "";
+            // 
             // FormDebug
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(678, 396);
+            this.Controls.Add(this.richTextBoxLogs);
             this.Controls.Add(this.lookUpEditFindResult);
             this.Controls.Add(this.btnTagWrite);
             this.Controls.Add(this.btnFind);
             this.Controls.Add(this.btnTagRead);
             this.Controls.Add(this.textEditTagValue);
             this.Controls.Add(this.textEditTagName);
-            this.Controls.Add(this.textBoxLogs);
             this.Name = "FormDebug";
             this.Text = "FormDebug";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.FormDebug_FormClosed);
@@ -124,18 +123,16 @@
             ((System.ComponentModel.ISupportInitialize)(this.textEditTagValue.Properties)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.lookUpEditFindResult.Properties)).EndInit();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
         #endregion
-
-        private System.Windows.Forms.TextBox textBoxLogs;
         private DevExpress.XtraEditors.TextEdit textEditTagName;
         private DevExpress.XtraEditors.TextEdit textEditTagValue;
         private DevExpress.XtraEditors.SimpleButton btnTagRead;
         private DevExpress.XtraEditors.SimpleButton btnTagWrite;
         private DevExpress.XtraEditors.SimpleButton btnFind;
         private DevExpress.XtraEditors.LookUpEdit lookUpEditFindResult;
+        private System.Windows.Forms.RichTextBox richTextBoxLogs;
     }
 }

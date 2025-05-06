@@ -669,6 +669,19 @@ namespace TechRecipeAX
         /// <exception cref="Win32Exception"></exception>
         public string TagRead(string tag)
         {
+            string valResult = "error";
+
+            var value = new StringBuilder(100);
+            var result = CtTagRead(_ctapi, tag, value, value.Capacity);
+            if (result != false)
+                valResult = value.ToString();
+
+            Logger.Debug($"Citect.CtApi > TagRead, tag = {tag}, value = {valResult}");
+            return valResult;
+        }
+
+        public string TagReadWithDebug(string tag)
+        {
             Logger.Debug($"Citect.CtApi > TagRead, tag={tag}");
 
             var value = new StringBuilder(100);
@@ -704,6 +717,17 @@ namespace TechRecipeAX
         /// <param name="value">The value to write to the tag as a string.</param>
         /// <exception cref="Win32Exception"></exception>
         public void TagWrite(string tag, string value)
+        {
+            var result = CtTagWrite(_ctapi, tag, value);
+            if (result == false)
+            {
+                Logger.Debug($"Citect.CtApi > TagWrite, tag = {tag}, value = {value}, error = write with error");
+            }
+            else
+                Logger.Debug($"Citect.CtApi > TagWrite, tag = {tag}, value = {value}");
+        }
+
+        public void TagWriteWithDebug(string tag, string value)
         {
             Logger.Debug($"Citect.CtApi > TagWrite, tag={tag}, value={value}");
 
