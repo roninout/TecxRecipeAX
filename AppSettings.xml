@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<settings>
+  <!-- CtApi settings -->
+
+  <CtApiPath>D:\AVEVA\AVEVA Plant SCADA\Bin\Bin (x64)</CtApiPath>
+  <CtApiIp>192.168.15.5</CtApiIp>
+  <CtApiUser>Al</CtApiUser>
+  <CtApiPassword>kip12345</CtApiPassword>
+  
+</settings>

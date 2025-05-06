@@ -13,6 +13,9 @@ using System.IO;
 using DevExpress.XtraPrinting.Native;
 using DevExpress.Internal.WinApi.Windows.UI.Notifications;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using System.Net;
+using System.Xml.Linq;
+using System.Reflection;
 
 namespace TecxRecipeAX
 {
@@ -42,9 +45,8 @@ namespace TecxRecipeAX
 
         private void InitCtApi()
         {
-            //_ctApi.SetCtApiDirectory(@"D:\CtApi\x64");
-            _ctApi.SetCtApiDirectory(@"D:\AVEVA\AVEVA Plant SCADA\Bin\Bin (x64)");
-            _ctApi.OpenAsync("192.168.15.5", "Al", "kip12345");
+            _ctApi.SetCtApiDirectory(ConfigHelper.CtApiPath);
+            _ctApi.OpenAsync(ConfigHelper.CtApiIp, ConfigHelper.CtApiUser, ConfigHelper.CtApiPassword);
         }
 
         #endregion
