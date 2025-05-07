@@ -40,6 +40,7 @@
             this.btnRefreshRecipe = new DevExpress.XtraEditors.SimpleButton();
             this.lookUpEditRecipe = new DevExpress.XtraEditors.LookUpEdit();
             this.btnDebug = new DevExpress.XtraEditors.SimpleButton();
+            this.btnDataToPlc = new DevExpress.XtraEditors.SimpleButton();
             ((System.ComponentModel.ISupportInitialize)(this.gridControlStages)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.gridViewStages)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.progressBarControl1.Properties)).BeginInit();
@@ -155,13 +156,24 @@
             // btnDebug
             // 
             this.btnDebug.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnDebug.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("simpleButton1.ImageOptions.SvgImage")));
-            this.btnDebug.Location = new System.Drawing.Point(450, 18);
+            this.btnDebug.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("btnDebug.ImageOptions.SvgImage")));
+            this.btnDebug.Location = new System.Drawing.Point(509, 18);
             this.btnDebug.Name = "btnDebug";
             this.btnDebug.Size = new System.Drawing.Size(136, 40);
             this.btnDebug.TabIndex = 0;
             this.btnDebug.Text = "Debug";
             this.btnDebug.Click += new System.EventHandler(this.btnDebug_Click);
+            // 
+            // btnDataToPlc
+            // 
+            this.btnDataToPlc.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnDataToPlc.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("simpleButton1.ImageOptions.SvgImage")));
+            this.btnDataToPlc.Location = new System.Drawing.Point(385, 18);
+            this.btnDataToPlc.Name = "btnDataToPlc";
+            this.btnDataToPlc.Size = new System.Drawing.Size(40, 40);
+            this.btnDataToPlc.TabIndex = 0;
+            this.btnDataToPlc.ToolTip = "Перечитати поточний рецепт з БД";
+            this.btnDataToPlc.Click += new System.EventHandler(this.btnDataToPlc_Click);
             // 
             // RecipeUI
             // 
@@ -173,6 +185,7 @@
             this.Controls.Add(this.gridControlStages);
             this.Controls.Add(this.btnEditRecipe);
             this.Controls.Add(this.btnEditStages);
+            this.Controls.Add(this.btnDataToPlc);
             this.Controls.Add(this.btnRefreshRecipe);
             this.Controls.Add(this.btnDebug);
             this.Controls.Add(this.btnEditParameters);
@@ -202,5 +215,6 @@
         private DevExpress.XtraEditors.SimpleButton btnRefreshRecipe;
         private DevExpress.XtraEditors.LookUpEdit lookUpEditRecipe;
         private DevExpress.XtraEditors.SimpleButton btnDebug;
+        private DevExpress.XtraEditors.SimpleButton btnDataToPlc;
     }
 }

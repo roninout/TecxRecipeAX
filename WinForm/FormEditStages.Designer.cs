@@ -67,8 +67,8 @@
             // 
             this.gridViewStages.Columns.AddRange(new DevExpress.XtraGrid.Columns.GridColumn[] {
             this.gridColumn1,
-            this.gridColumn2,
-            this.gridColumn3});
+            this.gridColumn3,
+            this.gridColumn2});
             this.gridViewStages.GridControl = this.gridControlStages;
             this.gridViewStages.Name = "gridViewStages";
             this.gridViewStages.OptionsView.ColumnAutoWidth = false;
@@ -89,16 +89,18 @@
             this.gridColumn2.Name = "gridColumn2";
             this.gridColumn2.OptionsColumn.FixedWidth = true;
             this.gridColumn2.Visible = true;
-            this.gridColumn2.VisibleIndex = 0;
+            this.gridColumn2.VisibleIndex = 1;
             this.gridColumn2.Width = 250;
             // 
             // gridColumn3
             // 
-            this.gridColumn3.Caption = "Description";
+            this.gridColumn3.Caption = "Numb";
             this.gridColumn3.FieldName = "description";
             this.gridColumn3.Name = "gridColumn3";
             this.gridColumn3.OptionsColumn.FixedWidth = true;
-            this.gridColumn3.Width = 200;
+            this.gridColumn3.Visible = true;
+            this.gridColumn3.VisibleIndex = 0;
+            this.gridColumn3.Width = 40;
             // 
             // btnDeleteStage
             // 

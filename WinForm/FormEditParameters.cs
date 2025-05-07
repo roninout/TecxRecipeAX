@@ -133,7 +133,8 @@ namespace TecxRecipeAX
             {
                 name = "New parameter",
                 type = newType,
-                description = "Description"
+                description = "",
+                tag = ""
             };
 
             // Добавляем новый параметр в BindingList

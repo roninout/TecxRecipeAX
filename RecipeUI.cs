@@ -17,6 +17,7 @@ using DevExpress.XtraEditors.Controls;
 using System.Globalization;
 using static DevExpress.Utils.Svg.CommonSvgImages;
 using DevExpress.XtraGrid.Columns;
+using DevExpress.Internal.WinApi.Windows.UI.Notifications;
 
 namespace TechRecipeAX
 {
@@ -32,12 +33,22 @@ namespace TechRecipeAX
         //private BindingList<RecipeStage> recipeStageBindingList;
         private BindingList<StageGridItem> stageGridItems;
         private Recipe selectedRecipe;
+        private bool writeToPLC;
+        private CtApi _ctApi;
 
         public RecipeUI()
         {
             InitializeComponent();
             // Запускаем асинхронную инициализацию
             this.Load += async (sender, e) => await InitializeAsync();
+            InitCtApi();
+        }
+
+        private void InitCtApi()
+        {
+            _ctApi = new CtApi();
+            _ctApi.SetCtApiDirectory(ConfigHelper.CtApiPath);
+            _ctApi.OpenAsync(ConfigHelper.CtApiIp, ConfigHelper.CtApiUser, ConfigHelper.CtApiPassword);
         }
 
         #region Init data
@@ -150,7 +161,7 @@ namespace TechRecipeAX
             gridViewStages.OptionsView.ColumnHeaderAutoHeight = DevExpress.Utils.DefaultBoolean.True;
             gridViewStages.Appearance.HeaderPanel.TextOptions.WordWrap = DevExpress.Utils.WordWrap.Wrap;
             gridViewStages.Appearance.HeaderPanel.Font = new Font(gridViewStages.Appearance.HeaderPanel.Font, FontStyle.Bold);
-            gridViewStages.Appearance.HeaderPanel.TextOptions.HAlignment = DevExpress.Utils.HorzAlignment.Center;            
+            gridViewStages.Appearance.HeaderPanel.TextOptions.HAlignment = DevExpress.Utils.HorzAlignment.Center;
         }
 
         // инициализация колонок в таблице
@@ -187,7 +198,7 @@ namespace TechRecipeAX
                     {
                         Name = name,
                         Type = paramInfo?.type ?? int.MaxValue,
-                        Description = paramInfo?.description ?? ""
+                        Description = paramInfo?.description ?? "",                        
                     };
                 })
                 .OrderBy(p => p.Type)
@@ -493,6 +504,18 @@ namespace TechRecipeAX
             }
         }
 
+        private void btnDataToPlc_Click(object sender, EventArgs e)
+        {
+            var plcData = PrepareRecipeDate();
+            //LogRecipeToPLC(plcData);
+            var paramDictionary = CreateParamTagsForPLC(plcData);
+            if (!writeToPLC)
+                WriteToPLC(paramDictionary);
+            else
+                Logger.Warning("Я ще не закінчив писати в PLC!!!!");
+        }
+    
+
         #endregion
 
         #region Stuff
@@ -594,14 +617,235 @@ namespace TechRecipeAX
 
         #endregion
 
-    }
+        #region PLC
 
-    public class StageGridItem
-    {
-        public int RecipeStageId { get; set; }
-        public int stageNumb { get; set; }
-        public string name { get; set; }
-        public bool auto { get; set; }
-        public Dictionary<string, double> Parameters { get; set; } = new Dictionary<string, double>();
+        // формируем RecipeToPLC тип с текущим рецептом
+        private RecipeToPLC PrepareRecipeDate()
+        {
+            if (selectedRecipe == null)
+                return null;
+
+            var baseParams = _context.BaseParameters.ToList();
+            var baseStages = _context.BaseRecipeStages.ToList();
+
+            var stages = selectedRecipe.RecipeStages
+                .OrderBy(s => s.stageNumb)
+                .Select(stage => new RecipeStageToPLC
+                {
+                    StageNumb = stage.stageNumb,
+                    BaseStageNumb = baseStages.FirstOrDefault(b => b.id == stage.baseRecipeStageId).description,
+                    Name = stage.name,
+                    Tag = stage.description,
+                    Auto = stage.auto,
+                    Parameters = stage.RecipeParameters
+                        .Select(p =>
+                        {
+                            var bp = baseParams.FirstOrDefault(b => b.name == p.name);
+                            return new ParamInfo
+                            {
+                                Name = p.name,
+                                Value = p.value,
+                                Type = bp?.type ?? int.MaxValue,
+                                Tag = bp.tag
+                            };
+                        })
+                        .OrderBy(p => p.Type)
+                        .ThenBy(p => p.Name)
+                        .ToList()
+                })
+                .ToList();
+
+            return new RecipeToPLC
+            {
+                RecipeId = selectedRecipe.id,
+                RecipeName = selectedRecipe.name,
+                Stages = stages
+            };
+        }
+
+        // преобразовывем RecipeToPLC в теги для PLC + логирование
+        private Dictionary<string, string> CreateParamTagsForPLC(RecipeToPLC recipe)
+        {
+            var result = new Dictionary<string, string>();
+
+            if (recipe == null || recipe.Stages == null)
+            {
+                Logger.Warning("CreateTagsForPLC: Пустой рецепт или стадии.");
+                return result;
+            }
+
+            foreach (var stage in recipe.Stages)
+            {
+                if (string.IsNullOrWhiteSpace(stage.Tag))
+                {
+                    Logger.Warning($"Stage {stage.Name} не имеет Tag. Пропуск.");
+                    continue;
+                }
+
+                foreach (var param in stage.Parameters)
+                {
+                    if (string.IsNullOrWhiteSpace(param.Tag))
+                    {
+                        Logger.Warning($"Параметр {param.Name} в стадии {stage.Name} не имеет Tag. Пропуск.");
+                        continue;
+                    }
+
+                    string key =$"{stage.Tag}_{stage.StageNumb}_{param.Tag}";
+
+                    //int value = ConvertDoubleToIntSmart(param.Value);
+                    var value = param.Value.ToString();
+
+                    if (!result.ContainsKey(key))
+                    {
+                        result.Add(key, value);
+                    }
+                    else
+                    {
+                        Logger.Warning($"Дубликат ключа '{key}' в CreateTagsForPLC. Старое значение: {result[key]}, новое: {value}. Пропуск.");
+                    }
+                }
+            }
+
+            Logger.Info($"Результат CreateTagsForPLC: Рецепт: ID={recipe.RecipeId}, Name=\"{recipe.RecipeName}\"");
+            foreach (var kvp in result.OrderBy(k => k.Key))
+            {
+                Logger.Info($"  {kvp.Key} = {kvp.Value}");
+            }
+
+            return result;
+        }
+
+        // записать рецепт в PlanScada - CtApi
+        private async void WriteToPLC(Dictionary<string, string> paramTags)
+        {
+            writeToPLC = true;
+            //var cicode = _ctApi.Cicode("TagWrite()");
+
+            try
+            {                
+                foreach (var paramTag in paramTags.OrderBy(k => k.Key))
+                {
+                    //await _ctApi.CicodeAsync($"TagWrite({paramTag.Key}, {paramTag.Value})");
+                await _ctApi.TagWriteAsync(paramTag.Key, paramTag.Value);
+                //await Task.Delay(50);
+                }
+            }
+            catch (Exception ex)
+            {                
+                Logger.Error($"Error write recipe tags to PLC: {ex.Message}");
+                writeToPLC = false;
+            }            
+            Logger.Info("Finished write recipe tags to PLC");
+            writeToPLC = false;
+        }
+
+        // переобразовываем double в int
+        private int ConvertDoubleToIntSmart(double value)
+        {
+            // Если дробная часть отсутствует, возвращаем как есть
+            if (value % 1 == 0)
+                return ClampToInt16((int)value);
+
+            // Получаем количество знаков после запятой
+            int decimalPlaces = BitConverter.GetBytes(decimal.GetBits((decimal)value)[3])[2];
+
+            // Умножаем на 10^decimalPlaces и округляем
+            double scaled = value * Math.Pow(10, decimalPlaces);
+            return ClampToInt16((int)Math.Round(scaled));
+        }
+
+        // метод ограничивает 16 int
+        private int ClampToInt16(int value)
+        {
+            return Math.Max(short.MinValue, Math.Min(short.MaxValue, value));
+        }
+
+        // отображение данных в логах
+        private void LogRecipeToPLCTable(RecipeToPLC recipe)
+        {
+            if (recipe == null)
+            {
+                Logger.Warning("RecipeToPLC is null.");
+                return;
+            }
+
+            // Получаем все уникальные параметры по имени и типу
+            var allParamInfos = recipe.Stages
+                .SelectMany(s => s.Parameters)
+                .GroupBy(p => p.Name)
+                .Select(g =>
+                {
+                    var first = g.First();
+                    return new
+                    {
+                        Name = g.Key,
+                        Type = first.Type
+                    };
+                })
+                .OrderBy(p => p.Type)
+                .ThenBy(p => p.Name)
+                .ToList();
+
+            // Заголовок
+            var header = $"{"№",3} | {"Stage",-20} | {"Auto",4} | " + string.Join(" | ", allParamInfos.Select(p => $"{p.Name,10}"));
+            var separator = new string('-', header.Length);
+
+            Logger.Info($"Рецепт: ID={recipe.RecipeId}, Name=\"{recipe.RecipeName}\"");
+            Logger.Info(separator);
+            Logger.Info(header);
+            Logger.Info(separator);
+
+            // Строки по стадиям
+            foreach (var stage in recipe.Stages)
+            {
+                string line = $"{stage.StageNumb,3} | {stage.Name,-20} | {(stage.Auto ? "Yes" : "No "),4} | " +
+                              string.Join(" | ", allParamInfos.Select(p =>
+                              {
+                                  var param = stage.Parameters.FirstOrDefault(x => x.Name == p.Name);
+                                  return param != null ? $"{param.Value,10:N2}" : $"{"",10}";
+                              }));
+
+                Logger.Info(line);
+            }
+
+            Logger.Info(separator);
+        }
+
+        private void LogRecipeToPLC(RecipeToPLC recipe)
+        {
+            if (recipe == null)
+            {
+                Logger.Warning("RecipeToPLC is null.");
+                return;
+            }
+
+            Logger.Info($"Рецепт: ID={recipe.RecipeId}, Name=\"{recipe.RecipeName}\"");
+
+            foreach (var stage in recipe.Stages)
+            {
+                var sortedParams = stage.Parameters
+                    .OrderBy(p => p.Type)
+                    .ThenBy(p => p.Name)
+                    .ToList();
+
+                var paramParts = sortedParams.Select(p => $"({p.Type}, {p.Name}, {p.Tag}, {p.Value:N2})");
+
+                string line = $"{stage.StageNumb} - {stage.BaseStageNumb} - {stage.Name} - {stage.Tag} - {string.Join(" - ", paramParts)} - Auto: {(stage.Auto ? "Yes" : "No")}";
+                Logger.Info(line);
+            }
+        }
+
+        #endregion
+
+
+
+        public class StageGridItem
+        {
+            public int RecipeStageId { get; set; }
+            public int stageNumb { get; set; }
+            public string name { get; set; }
+            public bool auto { get; set; }
+            public Dictionary<string, double> Parameters { get; set; } = new Dictionary<string, double>();
+        }
     }
 }

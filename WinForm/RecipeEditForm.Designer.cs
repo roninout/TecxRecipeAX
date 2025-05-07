@@ -38,6 +38,7 @@
             this.gridColumn5 = new DevExpress.XtraGrid.Columns.GridColumn();
             this.btnAddStageToRecipe = new DevExpress.XtraEditors.SimpleButton();
             this.RecipeEditFormlayoutControl1ConvertedLayout = new DevExpress.XtraLayout.LayoutControl();
+            this.btnCopyRecipe = new DevExpress.XtraEditors.SimpleButton();
             this.btnToggleEditName = new DevExpress.XtraEditors.SimpleButton();
             this.comboBoxRecipes = new DevExpress.XtraEditors.LookUpEdit();
             this.btnDown = new DevExpress.XtraEditors.SimpleButton();
@@ -58,7 +59,6 @@
             this.btnAddStageToRecipeitem = new DevExpress.XtraLayout.LayoutControlItem();
             this.gridControlStagesitem = new DevExpress.XtraLayout.LayoutControlItem();
             this.emptySpaceItem1 = new DevExpress.XtraLayout.EmptySpaceItem();
-            this.btnCopyRecipe = new DevExpress.XtraEditors.SimpleButton();
             this.layoutControlItem1 = new DevExpress.XtraLayout.LayoutControlItem();
             ((System.ComponentModel.ISupportInitialize)(this.gridControlStages)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.gridViewStages)).BeginInit();
@@ -114,14 +114,14 @@
             // 
             // gridColumn2
             // 
-            this.gridColumn2.Caption = "Number";
+            this.gridColumn2.Caption = "Numb";
             this.gridColumn2.FieldName = "stageNumb";
             this.gridColumn2.Name = "gridColumn2";
             this.gridColumn2.OptionsColumn.AllowEdit = false;
             this.gridColumn2.OptionsColumn.FixedWidth = true;
             this.gridColumn2.Visible = true;
             this.gridColumn2.VisibleIndex = 0;
-            this.gridColumn2.Width = 60;
+            this.gridColumn2.Width = 40;
             // 
             // gridColumn3
             // 
@@ -135,7 +135,7 @@
             // 
             // gridColumn4
             // 
-            this.gridColumn4.Caption = "Description";
+            this.gridColumn4.Caption = "Tag";
             this.gridColumn4.FieldName = "description";
             this.gridColumn4.Name = "gridColumn4";
             this.gridColumn4.OptionsColumn.FixedWidth = true;
@@ -185,6 +185,19 @@
             this.RecipeEditFormlayoutControl1ConvertedLayout.Root = this.layoutControlGroup1;
             this.RecipeEditFormlayoutControl1ConvertedLayout.Size = new System.Drawing.Size(648, 601);
             this.RecipeEditFormlayoutControl1ConvertedLayout.TabIndex = 12;
+            // 
+            // btnCopyRecipe
+            // 
+            this.btnCopyRecipe.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnCopyRecipe.ImageOptions.Location = DevExpress.XtraEditors.ImageLocation.MiddleCenter;
+            this.btnCopyRecipe.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("btnCopyRecipe.ImageOptions.SvgImage")));
+            this.btnCopyRecipe.Location = new System.Drawing.Point(251, 12);
+            this.btnCopyRecipe.Name = "btnCopyRecipe";
+            this.btnCopyRecipe.Size = new System.Drawing.Size(38, 36);
+            this.btnCopyRecipe.StyleController = this.RecipeEditFormlayoutControl1ConvertedLayout;
+            this.btnCopyRecipe.TabIndex = 12;
+            this.btnCopyRecipe.ToolTip = "Створити новий рецепт на базі поточного";
+            this.btnCopyRecipe.Click += new System.EventHandler(this.btnCopyRecipe_Click);
             // 
             // btnToggleEditName
             // 
@@ -426,19 +439,6 @@
             this.emptySpaceItem1.Name = "emptySpaceItem1";
             this.emptySpaceItem1.Size = new System.Drawing.Size(53, 40);
             this.emptySpaceItem1.TextSize = new System.Drawing.Size(0, 0);
-            // 
-            // btnCopyRecipe
-            // 
-            this.btnCopyRecipe.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCopyRecipe.ImageOptions.Location = DevExpress.XtraEditors.ImageLocation.MiddleCenter;
-            this.btnCopyRecipe.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("simpleButton1.ImageOptions.SvgImage")));
-            this.btnCopyRecipe.Location = new System.Drawing.Point(251, 12);
-            this.btnCopyRecipe.Name = "btnCopyRecipe";
-            this.btnCopyRecipe.Size = new System.Drawing.Size(38, 36);
-            this.btnCopyRecipe.StyleController = this.RecipeEditFormlayoutControl1ConvertedLayout;
-            this.btnCopyRecipe.TabIndex = 12;
-            this.btnCopyRecipe.ToolTip = "Створити новий рецепт на базі поточного";
-            this.btnCopyRecipe.Click += new System.EventHandler(this.btnCopyRecipe_Click);
             // 
             // layoutControlItem1
             // 

@@ -79,10 +79,10 @@ namespace TecxRecipeAX
                 column.Width = 250;
             }
 
-            var colDescription = gridViewStages.Columns.AddVisible(nameof(StageGridItem.description), "Description");
-            colDescription.OptionsColumn.AllowEdit = true;
-            colDescription.Width = 150;
-            colDescription.OptionsColumn.FixedWidth = false;
+            //var colDescription = gridViewStages.Columns.AddVisible(nameof(StageGridItem.description), "Numb");
+            //colDescription.OptionsColumn.AllowEdit = true;
+            //colDescription.Width = 50;
+            //colDescription.OptionsColumn.FixedWidth = false;
 
             // Сортировка по имени
             gridViewStages.SortInfo.Add(new GridColumnSortInfo(gridViewStages.Columns["name"], DevExpress.Data.ColumnSortOrder.Ascending));

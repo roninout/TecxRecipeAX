@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -249,9 +250,11 @@ namespace TechRecipeAX
             var result = CtCicode(_ctapi, cmd, win, 0, value, value.Capacity, IntPtr.Zero);
             if (result == 0)
             {
-                var error = new Win32Exception(Marshal.GetLastWin32Error());
-                Logger.Error($"Citect.CtApi > Cicode, cmd={cmd}, win={win}, error={error.Message}");
-                throw error;
+                //var error = new Win32Exception(Marshal.GetLastWin32Error());
+                //Logger.Error($"Citect.CtApi > Cicode, cmd={cmd}, win={win}, error={error.Message}");
+                Logger.Error($"Citect.CtApi > Cicode, cmd={cmd}, win={win}, error=error");
+                //throw error;
+                return result.ToString();
             }
             else
             {
@@ -718,10 +721,26 @@ namespace TechRecipeAX
         /// <exception cref="Win32Exception"></exception>
         public void TagWrite(string tag, string value)
         {
+            var strBuid = new StringBuilder(100);
+            var result = CtCicode(_ctapi, $"TagWrite({tag}, {value})", 0, 0, strBuid, strBuid.Capacity, IntPtr.Zero);
+
+            //var result = Cicode($"TagWrite({tag}, {value})");
+
+            if (result == 0)
+            {
+                Logger.Error($"Citect.CtApi > Cicode TagWrite, tag = {tag}, value = {value}, error = write with error");
+            }
+            else
+                Logger.Debug($"Citect.CtApi > Cicode TagWrite, tag = {tag}, value = {value}");
+        }
+
+
+        public void TagWriteSynch(string tag, string value)
+        {
             var result = CtTagWrite(_ctapi, tag, value);
             if (result == false)
             {
-                Logger.Debug($"Citect.CtApi > TagWrite, tag = {tag}, value = {value}, error = write with error");
+                Logger.Error($"Citect.CtApi > TagWrite, tag = {tag}, value = {value}, error = write with error");
             }
             else
                 Logger.Debug($"Citect.CtApi > TagWrite, tag = {tag}, value = {value}");

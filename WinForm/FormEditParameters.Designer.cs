@@ -43,6 +43,7 @@
             this.btnAddParameteritem = new DevExpress.XtraLayout.LayoutControlItem();
             this.gridControlParametersitem = new DevExpress.XtraLayout.LayoutControlItem();
             this.emptySpaceItem1 = new DevExpress.XtraLayout.EmptySpaceItem();
+            this.gridColumn5 = new DevExpress.XtraGrid.Columns.GridColumn();
             ((System.ComponentModel.ISupportInitialize)(this.gridControlParameters)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.gridViewParameters)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.FormEditParameterslayoutControl1ConvertedLayout)).BeginInit();
@@ -73,7 +74,8 @@
             this.gridColumn1,
             this.gridColumn3,
             this.gridColumn2,
-            this.gridColumn4});
+            this.gridColumn4,
+            this.gridColumn5});
             this.gridViewParameters.GridControl = this.gridControlParameters;
             this.gridViewParameters.GroupSummary.AddRange(new DevExpress.XtraGrid.GridSummaryItem[] {
             new DevExpress.XtraGrid.GridGroupSummaryItem(DevExpress.Data.SummaryItemType.Sum, "", null, "")});
@@ -107,16 +109,16 @@
             this.gridColumn2.OptionsColumn.FixedWidth = true;
             this.gridColumn2.Visible = true;
             this.gridColumn2.VisibleIndex = 1;
-            this.gridColumn2.Width = 400;
+            this.gridColumn2.Width = 250;
             // 
             // gridColumn4
             // 
-            this.gridColumn4.Caption = "Description";
+            this.gridColumn4.Caption = "Unit";
             this.gridColumn4.FieldName = "description";
             this.gridColumn4.Name = "gridColumn4";
             this.gridColumn4.Visible = true;
             this.gridColumn4.VisibleIndex = 2;
-            this.gridColumn4.Width = 105;
+            this.gridColumn4.Width = 100;
             // 
             // btnAddParameter
             // 
@@ -203,6 +205,15 @@
             this.emptySpaceItem1.Size = new System.Drawing.Size(354, 40);
             this.emptySpaceItem1.TextSize = new System.Drawing.Size(0, 0);
             // 
+            // gridColumn5
+            // 
+            this.gridColumn5.Caption = "Tag";
+            this.gridColumn5.FieldName = "tag";
+            this.gridColumn5.Name = "gridColumn5";
+            this.gridColumn5.Visible = true;
+            this.gridColumn5.VisibleIndex = 3;
+            this.gridColumn5.Width = 155;
+            // 
             // FormEditParameters
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -243,5 +254,6 @@
         private DevExpress.XtraLayout.LayoutControlItem btnAddParameteritem;
         private DevExpress.XtraLayout.LayoutControlItem gridControlParametersitem;
         private DevExpress.XtraLayout.EmptySpaceItem emptySpaceItem1;
+        private DevExpress.XtraGrid.Columns.GridColumn gridColumn5;
     }
 }
