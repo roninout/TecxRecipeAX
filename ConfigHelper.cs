@@ -48,10 +48,24 @@ namespace TecxRecipeAX
             return element.Value.Trim();
         }
 
+        // CtApi
         public static string CtApiPath => GetSetting("CtApiPath");
         public static string CtApiIp => GetSetting("CtApiIp");
         public static string CtApiUser => GetSetting("CtApiUser");
         public static string CtApiPassword => GetSetting("CtApiPassword");
+
+        // Set tags for PLC
+        public static string RecipeStageBase1Id => GetSetting("RecipeStageBase1Id");
+        public static string RecipeStageBase2Id => GetSetting("RecipeStageBase2Id");
+
+        public static string RecipeStageBase1Tag => GetSetting("RecipeStageBase1Tag");
+        public static string RecipeStageBase2Tag => GetSetting("RecipeStageBase2Tag");
+
+        public static string RecipeStageR01Tag => GetSetting("RecipeStageR01Tag");
+        public static string RecipeStageT08Tag => GetSetting("RecipeStageT08Tag");
+        public static string RecipeStageT09Tag => GetSetting("RecipeStageT09Tag");
+        public static string RecipeStageT10Tag => GetSetting("RecipeStageT10Tag");
+
     }
 
 

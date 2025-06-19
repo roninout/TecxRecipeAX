@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -12,6 +13,8 @@ using System.Runtime.Remoting.Contexts;
 using System.Collections.Generic;
 using DevExpress.XtraGrid.Views.Base;
 using System.Drawing;
+using DevExpress.XtraEditors.Controls;
+using DevExpress.XtraEditors.Repository;
 
 namespace TecxRecipeAX
 {
@@ -20,14 +23,28 @@ namespace TecxRecipeAX
         private HashSet<int> _usedParameterIds;
         private RecipeDbContext _context;
         private BindingList<BaseParameter> _bindingList;
+        private int? _currentBaseRecipeId;
+        private int? _selectedBaseRecipeId;
 
-        public FormEditParameters(RecipeDbContext context)
+        public FormEditParameters(RecipeDbContext context, int? currentBaseRecipeId)
         {
             InitializeComponent();
 
             _context = context;
-            _ = InitializeDataGrid();
+            _currentBaseRecipeId = currentBaseRecipeId;
+
+            // Асинхронные методы нужно вызывать через Load
+            this.Load += FormEditParameters_Load;
         }
+
+        #region Form
+        // Асинхронные методы нужно вызывать через Load
+        private async void FormEditParameters_Load(object sender, EventArgs e)
+        {
+            await InitializeDataGrid();
+            await InitializeBaseRecipeIdLookUpEdit();
+        }
+        #endregion
 
         #region Table
 
@@ -53,6 +70,16 @@ namespace TecxRecipeAX
                 // Сортируем данные по колонке Type
                 gridViewParameters.SortInfo.Clear();
                 gridViewParameters.SortInfo.Add(new DevExpress.XtraGrid.Columns.GridColumnSortInfo(gridViewParameters.Columns["type"], DevExpress.Data.ColumnSortOrder.Ascending));
+
+                // создаем колонку kind с комбобоксами
+                var columnKind = gridViewParameters.Columns.AddVisible("kindInt", "Type");
+                columnKind.ColumnEdit = CreateKindRepository();
+                columnKind.Width = 200;
+
+                // создаем колонку format с комбобоксами
+                var columnFormat = gridViewParameters.Columns.AddVisible("formatInt", "Format");
+                columnFormat.ColumnEdit = CreateFormatRepository();
+                columnFormat.Width = 100;
 
                 // Устанавливаем информацию о количестве элементов в строке состояния
                 //gridViewParameters.OptionsView.ShowFooter = true;
@@ -118,6 +145,113 @@ namespace TecxRecipeAX
             }
         }
 
+        private void gridViewParameters_CellValueChanged(object sender, CellValueChangedEventArgs e)
+        {
+            // column kind
+            if (e.Column.FieldName == "kindInt")
+            {
+                var parameter = gridViewParameters.GetRow(e.RowHandle) as BaseParameter;
+                if (parameter != null)
+                {
+                    // e.Value должен быть целым числом (Id из ComboBox)
+                    if (e.Value != null && int.TryParse(e.Value.ToString(), out int newKind))
+                    {
+                        parameter.kind = (ParamKind)newKind;
+
+                        // Обновляем через _bindingList
+                        var paramInList = _bindingList.FirstOrDefault(p => p.id == parameter.id);
+                        if (paramInList != null)
+                        {
+                            paramInList.kind = parameter.kind;
+                        }
+
+                        // Обновляем в БД
+                        _context.Entry(parameter).State = EntityState.Modified;
+                        _context.SaveChanges();
+                    }
+                }
+            }
+
+            // column format
+            if (e.Column.FieldName == "formatInt")
+            {
+                var parameter = gridViewParameters.GetRow(e.RowHandle) as BaseParameter;
+                if (parameter != null)
+                {
+                    // e.Value должен быть целым числом (Id из ComboBox)
+                    if (e.Value != null && int.TryParse(e.Value.ToString(), out int newFormat))
+                    {
+                        parameter.format = (ParamFormat)newFormat;
+
+                        // Обновляем через _bindingList
+                        var paramInList = _bindingList.FirstOrDefault(p => p.id == parameter.id);
+                        if (paramInList != null)
+                        {
+                            paramInList.format = parameter.format;
+                        }
+
+                        // Обновляем в БД
+                        _context.Entry(parameter).State = EntityState.Modified;
+                        _context.SaveChanges();
+                    }
+                }
+            }
+        }
+
+        // создаем ComboBox в ячейке kind
+        private RepositoryItemLookUpEdit CreateKindRepository()
+        {
+            // Список значений enum
+            var paramKinds = Enum.GetValues(typeof(ParamKind))
+                                  .Cast<ParamKind>()
+                                  .Select(e => new { id = (int)e, kind = e.ToString() })
+                                  .ToList();
+
+            var repo = new RepositoryItemLookUpEdit
+            {
+                DataSource = paramKinds,
+                DisplayMember = "kind",
+                ValueMember = "id",
+                TextEditStyle = TextEditStyles.DisableTextEditor
+            };
+
+            repo.Columns.Clear();
+            repo.Columns.Add(new LookUpColumnInfo("kind", "Type"));
+            repo.ShowHeader = false;
+            repo.ShowFooter = false;
+            //repo.ValidateOnEnterKey = true;
+
+            return repo;
+        }
+
+        // создаем ComboBox в ячейке format
+        private RepositoryItemLookUpEdit CreateFormatRepository()
+        {
+            // Список значений enum с "красивыми" подписями
+            var paramFormats = new[]
+            {
+                new { id = (int)ParamFormat.Default, format = "" },
+                new { id = (int)ParamFormat.N1, format = "#.#" },
+                new { id = (int)ParamFormat.N2, format = "#.##" },
+                new { id = (int)ParamFormat.N3, format = "#.###" },
+                new { id = (int)ParamFormat.N4, format = "#.####" },
+            }.ToList();
+
+            var repo = new RepositoryItemLookUpEdit
+            {
+                DataSource = paramFormats,
+                DisplayMember = "format",
+                ValueMember = "id",
+                TextEditStyle = TextEditStyles.DisableTextEditor
+            };
+
+            repo.Columns.Clear();
+            repo.Columns.Add(new LookUpColumnInfo("format", "Format"));
+            repo.ShowHeader = false;
+            repo.ShowFooter = false;
+
+            return repo;
+        }
 
         #endregion
 
@@ -134,7 +268,10 @@ namespace TecxRecipeAX
                 name = "New parameter",
                 type = newType,
                 description = "",
-                tag = ""
+                tag = "",
+                kind = ParamKind.InputField,
+                format = ParamFormat.Default,
+                baseRecipeId = _selectedBaseRecipeId
             };
 
             // Добавляем новый параметр в BindingList
@@ -143,12 +280,18 @@ namespace TecxRecipeAX
             // Добавляем новый параметр в базу данных
             _context.BaseParameters.Add(newParam);
             _context.SaveChanges();
+
+            // Вызов обработчика comboBoxEdit1_EditValueChanged вручную
+            comboBoxEdit1_EditValueChanged(null, EventArgs.Empty);
         }
 
         // Кнопка "Удалить параметр"
         private void btnDeleteParameter_Click(object sender, EventArgs e)
         {
             DeleteSelectedParameters();
+
+            // Вызов обработчика comboBoxEdit1_EditValueChanged вручную
+            comboBoxEdit1_EditValueChanged(null, EventArgs.Empty);
         }
 
         #endregion
@@ -201,5 +344,74 @@ namespace TecxRecipeAX
         }
 
         #endregion
+
+        #region ComboBox
+        // инициализация ComboBox
+        private async Task InitializeBaseRecipeIdLookUpEdit()
+        {
+            var uniqueIdsWithNames = await _context.RecipePages
+                .GroupBy(rp => rp.baseRecipeId)
+                .Select(g => new
+                {
+                    baseRecipeId = g.Key,
+                    recipeName = _context.Recipes
+                        .Where(r => r.id == g.Key)
+                        .Select(r => r.name)
+                        .FirstOrDefault()
+                })
+                .OrderBy(x => x.baseRecipeId)
+                .ToListAsync();
+
+            var dataSource = new List<BaseRecipeIdItem> { new BaseRecipeIdItem { id = null, name = "All" } };
+
+            dataSource.AddRange(uniqueIdsWithNames.Select(x => new BaseRecipeIdItem
+            {
+                id = x.baseRecipeId,
+                name = x.recipeName ?? "(No name)"
+            }));
+
+            var lookUpEdit = (lookUpEditBaseRecipeId.Control as LookUpEdit);
+            lookUpEdit.Properties.DataSource = dataSource;
+            lookUpEdit.Properties.DisplayMember = "name";
+            lookUpEdit.Properties.ValueMember = "id";
+            lookUpEdit.Properties.NullText = "All";
+
+            lookUpEdit.Properties.PopulateColumns();
+            lookUpEdit.Properties.Columns["id"].Caption = "ID";
+            lookUpEdit.Properties.Columns["id"].Visible = true;
+            lookUpEdit.Properties.Columns["id"].Width = 50;
+            lookUpEdit.Properties.Columns["name"].Caption = "Recipe Name";
+            lookUpEdit.Properties.Columns["name"].Visible = true;
+
+            comboBoxEdit1.EditValue = _currentBaseRecipeId;
+        }
+
+        // события ComboBox
+        private void comboBoxEdit1_EditValueChanged(object sender, EventArgs e)
+        {
+            // Получаем выбранное значение
+            _selectedBaseRecipeId = (lookUpEditBaseRecipeId.Control as LookUpEdit).EditValue as int?;
+
+            // Если "All" — отображаем все параметры
+            if (_selectedBaseRecipeId == null)
+            {
+                gridControlParameters.DataSource = _bindingList;
+            }
+            else
+            {
+                // Отображаем только параметры с baseRecipeId = selectedId
+                var filtered = _bindingList.Where(p => p.baseRecipeId == _selectedBaseRecipeId).ToList();
+                gridControlParameters.DataSource = new BindingList<BaseParameter>(filtered);
+            }
+
+            gridViewParameters.RefreshData();
+        }
+        #endregion
+    }
+
+    public class BaseRecipeIdItem
+    {
+        public int? id { get; set; }
+        public string name { get; set; } = string.Empty;
     }
 }

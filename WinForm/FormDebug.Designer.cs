@@ -35,15 +35,17 @@
             this.btnFind = new DevExpress.XtraEditors.SimpleButton();
             this.lookUpEditFindResult = new DevExpress.XtraEditors.LookUpEdit();
             this.richTextBoxLogs = new System.Windows.Forms.RichTextBox();
+            this.textEditFindFilter = new DevExpress.XtraEditors.TextEdit();
             ((System.ComponentModel.ISupportInitialize)(this.textEditTagName.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.textEditTagValue.Properties)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.lookUpEditFindResult.Properties)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.textEditFindFilter.Properties)).BeginInit();
             this.SuspendLayout();
             // 
             // textEditTagName
             // 
             this.textEditTagName.EditValue = "TagName";
-            this.textEditTagName.Location = new System.Drawing.Point(13, 13);
+            this.textEditTagName.Location = new System.Drawing.Point(13, 9);
             this.textEditTagName.Name = "textEditTagName";
             this.textEditTagName.Size = new System.Drawing.Size(168, 20);
             this.textEditTagName.TabIndex = 1;
@@ -51,7 +53,7 @@
             // textEditTagValue
             // 
             this.textEditTagValue.EditValue = "Value";
-            this.textEditTagValue.Location = new System.Drawing.Point(498, 13);
+            this.textEditTagValue.Location = new System.Drawing.Point(498, 9);
             this.textEditTagValue.Name = "textEditTagValue";
             this.textEditTagValue.Size = new System.Drawing.Size(168, 20);
             this.textEditTagValue.TabIndex = 1;
@@ -85,11 +87,11 @@
             // 
             // lookUpEditFindResult
             // 
-            this.lookUpEditFindResult.Location = new System.Drawing.Point(227, 13);
+            this.lookUpEditFindResult.Location = new System.Drawing.Point(187, 35);
             this.lookUpEditFindResult.Name = "lookUpEditFindResult";
             this.lookUpEditFindResult.Properties.Buttons.AddRange(new DevExpress.XtraEditors.Controls.EditorButton[] {
             new DevExpress.XtraEditors.Controls.EditorButton(DevExpress.XtraEditors.Controls.ButtonPredefines.Combo)});
-            this.lookUpEditFindResult.Size = new System.Drawing.Size(223, 20);
+            this.lookUpEditFindResult.Size = new System.Drawing.Size(305, 20);
             this.lookUpEditFindResult.TabIndex = 5;
             this.lookUpEditFindResult.EditValueChanged += new System.EventHandler(this.lookUpEditFindResult_EditValueChanged);
             // 
@@ -104,6 +106,14 @@
             this.richTextBoxLogs.TabIndex = 6;
             this.richTextBoxLogs.Text = "";
             // 
+            // textEditFindFilter
+            // 
+            this.textEditFindFilter.EditValue = "Tag=*WT*;ITEM=Hmi";
+            this.textEditFindFilter.Location = new System.Drawing.Point(187, 9);
+            this.textEditFindFilter.Name = "textEditFindFilter";
+            this.textEditFindFilter.Size = new System.Drawing.Size(305, 20);
+            this.textEditFindFilter.TabIndex = 1;
+            // 
             // FormDebug
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -115,6 +125,7 @@
             this.Controls.Add(this.btnFind);
             this.Controls.Add(this.btnTagRead);
             this.Controls.Add(this.textEditTagValue);
+            this.Controls.Add(this.textEditFindFilter);
             this.Controls.Add(this.textEditTagName);
             this.Name = "FormDebug";
             this.Text = "FormDebug";
@@ -122,6 +133,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.textEditTagName.Properties)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.textEditTagValue.Properties)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.lookUpEditFindResult.Properties)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.textEditFindFilter.Properties)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -134,5 +146,6 @@
         private DevExpress.XtraEditors.SimpleButton btnFind;
         private DevExpress.XtraEditors.LookUpEdit lookUpEditFindResult;
         private System.Windows.Forms.RichTextBox richTextBoxLogs;
+        private DevExpress.XtraEditors.TextEdit textEditFindFilter;
     }
 }

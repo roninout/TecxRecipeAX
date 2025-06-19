@@ -1,10 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <settings>
   <!-- CtApi settings -->
-
   <CtApiPath>D:\AVEVA\AVEVA Plant SCADA\Bin\Bin (x64)</CtApiPath>
-  <CtApiIp>192.168.15.5</CtApiIp>
+  <CtApiIp>26.128.253.245</CtApiIp>
   <CtApiUser>Al</CtApiUser>
   <CtApiPassword>kip12345</CtApiPassword>
+
+  <!--Set tags for PLC-->
+  <RecipeStageBase1Id>5</RecipeStageBase1Id>
+  <RecipeStageBase2Id>3</RecipeStageBase2Id>
+  
+  <RecipeStageBase1Tag>S01_Recipe_Base_Stage</RecipeStageBase1Tag>
+  <RecipeStageBase2Tag>S01_Recipe_Base2_Stage</RecipeStageBase2Tag>
+  <RecipeStageR01Tag>S01_Recipe_R01_Stage</RecipeStageR01Tag>
+  <RecipeStageT08Tag>S01_Recipe_T08_Stage</RecipeStageT08Tag>
+  <RecipeStageT09Tag>S01_Recipe_T09_Stage</RecipeStageT09Tag>
+  <RecipeStageT10Tag>S01_Recipe_T10_Stage</RecipeStageT10Tag>
   
 </settings>

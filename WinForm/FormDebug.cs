@@ -29,16 +29,16 @@ namespace TecxRecipeAX
         private string tagRead;
         private string _lastReadLogLine = null;
 
-        public FormDebug(RecipeDbContext context)
+        public FormDebug(RecipeDbContext context, CtApi ctApi)
 		{
             InitializeComponent();
 
             _context = context;
             _logFilePath = Logger.logFilePath;
-            _ctApi = new CtApi();
+            _ctApi = ctApi;
 
             Shown += async (_, __) => await LoadLogsWithColorsAsync();
-            InitCtApi();
+            //InitCtApi();
         }
 
         #region CtApi
@@ -57,7 +57,7 @@ namespace TecxRecipeAX
         {
             _refreshTimer?.Stop();
             _refreshTimer?.Dispose();
-            _ctApi.Close();
+            //_ctApi.Close();
         }
 
         #endregion
@@ -102,8 +102,11 @@ namespace TecxRecipeAX
 
         private async void btnFind_Click(object sender, EventArgs e)
         {
-            var findResult = await _ctApi.FindAsync("Tag", "Tag=*WT*;ITEM=Hmi", "", "TAG");
+            //var findResult = await _ctApi.FindAsync("Tag", "Tag=*WT*;ITEM=Hmi", "", "TAG");
             //var findResult = await _ctApi.FindAsync("Equip", "Name=*TT*", "", "TAGPREFIX");
+            var findFilter = textEditFindFilter.Text;
+
+            var findResult = await _ctApi.FindAsync("Tag", findFilter, "", "TAG");
 
             var values = findResult
                 .SelectMany(dict => dict.Values)

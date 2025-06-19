@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DevExpress.Xpo.Logger;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -670,7 +671,23 @@ namespace TechRecipeAX
         /// </summary>
         /// <param name="tag">The tag name or tag name and element name, separated by a dot. If the element name is not specified, it will be resolved at runtime as for an unqualified tag reference. You may use the array syntax [] to select an element of an array.</param>
         /// <exception cref="Win32Exception"></exception>
-        public string TagRead(string tag)
+        public string TagRead(string tag, bool isLogger = false)
+        {
+            var value = new StringBuilder(100);
+            var result = CtCicode(_ctapi, $"TagRead({tag})", 0, 0, value, value.Capacity, IntPtr.Zero);
+
+            if (isLogger)
+            {
+                if (result == 0)
+                    Logger.Error($"Citect.CtApi > Cicode TagRead, tag = {tag}, value = {value}, error = read with error");
+                else
+                    Logger.Debug($"Citect.CtApi > Cicode TagRead, tag = {tag}, value = {value}");
+            }
+
+            return value.ToString();
+        }
+
+        public string TagReadSync(string tag)
         {
             string valResult = "error";
 
@@ -719,23 +736,23 @@ namespace TechRecipeAX
         /// <param name="tag">The tag name or tag name and element name, separated by a dot. If the element name is not specified, it will be resolved at runtime as for an unqualified tag reference. You may use the array syntax [] to select an element of an array.</param>
         /// <param name="value">The value to write to the tag as a string.</param>
         /// <exception cref="Win32Exception"></exception>
-        public void TagWrite(string tag, string value)
+        public void TagWrite(string tag, string value, bool isLogger = false)
         {
             var strBuid = new StringBuilder(100);
             var result = CtCicode(_ctapi, $"TagWrite({tag}, {value})", 0, 0, strBuid, strBuid.Capacity, IntPtr.Zero);
 
-            //var result = Cicode($"TagWrite({tag}, {value})");
-
-            if (result == 0)
+            if (isLogger)
             {
-                Logger.Error($"Citect.CtApi > Cicode TagWrite, tag = {tag}, value = {value}, error = write with error");
+
+                if (result == 0)
+                    Logger.Error($"Citect.CtApi > Cicode TagWrite, tag = {tag}, value = {value}, error = write with error");
+                else
+                    Logger.Debug($"Citect.CtApi > Cicode TagWrite, tag = {tag}, value = {value}");
             }
-            else
-                Logger.Debug($"Citect.CtApi > Cicode TagWrite, tag = {tag}, value = {value}");
         }
 
 
-        public void TagWriteSynch(string tag, string value)
+        public void TagWriteSync(string tag, string value)
         {
             var result = CtTagWrite(_ctapi, tag, value);
             if (result == false)

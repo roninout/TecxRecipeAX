@@ -13,6 +13,7 @@ namespace TechRecipeAX
         public int id { get; set; }
         public string name { get; set; } = string.Empty;
         public string description { get; set; } = string.Empty;
+        public int? baseRecipeId { get; set; }
 
         // Коллекция параметров (One-to-Many)
         public virtual ICollection<BaseParameter> BaseParameters { get; set; } = new List<BaseParameter>();

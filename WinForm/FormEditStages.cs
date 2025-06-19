@@ -13,7 +13,6 @@ using DevExpress.XtraEditors.Repository;
 using DevExpress.XtraEditors.Controls;
 using System.Windows.Forms;
 using System.Drawing;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Rebar;
 
 namespace TecxRecipeAX
 {
@@ -22,14 +21,18 @@ namespace TecxRecipeAX
         private RecipeDbContext _context;
         private BindingList<StageGridItem> _bindingList;
         private List<BaseParameter> _baseParametersList;
-        private const int ParameterCount = 16;
+        private const int ParameterCount = 32;
+        private bool showName = true;
+        private int? currentBaseRecipeIdFilter = null; // Текущий фильтр (null = все)
+        private int? _currentBaseRecipeId;
 
-        public FormEditStages(RecipeDbContext context)
+        public FormEditStages(RecipeDbContext context, int? currentBaseRecipeId)
         {
             InitializeComponent();
 
             _context = context;
             this.Load += async (s, e) => await InitializeAsync(); // выносим всю инициализацию
+            _currentBaseRecipeId = currentBaseRecipeId;
         }
 
         #region Init
@@ -39,6 +42,7 @@ namespace TecxRecipeAX
             await LoadDataAsync();
             ConfigureGridView();
             ConfigureParameterCellStyles(); // стилизация ячеек
+            await InitializeBaseRecipeIdLookUpEditForParameters();
         }
 
         private async Task LoadDataAsync()
@@ -75,33 +79,43 @@ namespace TecxRecipeAX
             for (int i = 1; i <= ParameterCount; i++)
             {
                 var column = gridViewStages.Columns.AddVisible($"Parameter{i}Name", $"Parameter {i}");
-                column.ColumnEdit = CreateParameterRepository();
-                column.Width = 250;
+                //column.ColumnEdit = CreateParameterRepository();
+                //column.Width = 250;
             }
 
-            //var colDescription = gridViewStages.Columns.AddVisible(nameof(StageGridItem.description), "Numb");
-            //colDescription.OptionsColumn.AllowEdit = true;
-            //colDescription.Width = 50;
-            //colDescription.OptionsColumn.FixedWidth = false;
+            //обрабатываем событие для динамического назначения редактора
+            gridViewStages.CustomRowCellEdit += (s, e) =>
+            {
+                for (int i = 1; i <= ParameterCount; i++)
+                {
+                    if (e.Column.FieldName == $"Parameter{i}Name")
+                    {
+                        var row = gridViewStages.GetRow(e.RowHandle) as StageGridItem;
+                        if (row != null)
+                        {
+                            e.RepositoryItem = CreateParameterRepository(row, i - 1); // i - 1 — индекс параметра
+                        }
+                    }
+                }
+            };
 
             // Сортировка по имени
             gridViewStages.SortInfo.Add(new GridColumnSortInfo(gridViewStages.Columns["name"], DevExpress.Data.ColumnSortOrder.Ascending));
-            //gridViewStages.BestFitColumns();
+            gridViewStages.BestFitColumns();
         }
 
-        // создаем ComboBox в ячейке параметров
-        private RepositoryItemLookUpEdit CreateParameterRepository()
+        private RepositoryItemLookUpEdit CreateParameterRepository(StageGridItem row, int parameterIndex)
         {
-            var parameterList = GetParameterListWithEmpty();
+            var parameterList = GetParameterListWithEmpty(row, parameterIndex);
             var repo = new RepositoryItemLookUpEdit
             {
                 DataSource = parameterList,
-                DisplayMember = "Name",
+                DisplayMember = showName ? "Name" : "Tag",
                 ValueMember = "Id",
                 NullText = "Empty",
                 AllowNullInput = DevExpress.Utils.DefaultBoolean.True
             };
-            repo.Columns.Add(new LookUpColumnInfo("Name", "Parameter"));
+            repo.Columns.Add(new LookUpColumnInfo(showName ? "Name" : "Tag", "Parameter"));
             repo.ValidateOnEnterKey = true;
             return repo;
         }
@@ -158,12 +172,14 @@ namespace TecxRecipeAX
             {
                 name = newName,
                 description = "",
-                ParameterIds = new int?[ParameterCount]
+                ParameterIds = new int?[ParameterCount],
+                baseRecipeId = currentBaseRecipeIdFilter,
             };
 
             // Добавляем в BindingList (автоматически обновляет Grid)
             _bindingList.Add(newStage);
-
+            // Вызов обработчика lookUpEditBaseRecipeIdForParameters_EditValueChanged вручную
+            lookUpEditBaseRecipeIdForParameters_EditValueChanged(null, EventArgs.Empty);
             // Фокусируемся на новой строке
             gridViewStages.FocusedRowHandle = gridViewStages.RowCount - 1;
         }
@@ -174,19 +190,110 @@ namespace TecxRecipeAX
             DeleteSelectedStages();
         }
 
+        // переключение отображения имени/тега в комбобоксах
+        private void toggleDisplayButton_Click(object sender, EventArgs e)
+        {
+            showName = !showName;
+
+            // Пробегаемся по всем колонкам с параметрами
+            for (int i = 1; i <= ParameterCount; i++)
+            {
+                var column = gridViewStages.Columns[$"Parameter{i}Name"];
+                if (column?.ColumnEdit is RepositoryItemLookUpEdit repo)
+                {
+                    repo.DisplayMember = showName ? "Name" : "Tag";
+                    repo.Columns.Clear();
+                    repo.Columns.Add(new LookUpColumnInfo(showName ? "Name" : "Tag", "Parameter"));
+                }
+            }
+
+            // Обновляем таблицу
+            gridViewStages.RefreshData();
+        }
+
+
+        #endregion
+
+        #region ComboBox
+        // инициализация фильтра отображения
+        private async Task InitializeBaseRecipeIdLookUpEditForParameters()
+        {
+            var uniqueIdsWithNames = await _context.RecipePages
+                .GroupBy(rp => rp.baseRecipeId)
+                .Select(g => new
+                {
+                    baseRecipeId = g.Key,
+                    recipeName = _context.Recipes
+                        .Where(r => r.id == g.Key)
+                        .Select(r => r.name)
+                        .FirstOrDefault()
+                })
+                .OrderBy(x => x.baseRecipeId)
+                .ToListAsync();
+
+            var dataSource = new List<BaseRecipeIdItem> { new BaseRecipeIdItem { id = null, name = "All" } };
+            dataSource.AddRange(uniqueIdsWithNames.Select(x => new BaseRecipeIdItem
+            {
+                id = x.baseRecipeId,
+                name = x.recipeName ?? "(No name)"
+            }));
+
+            var lookUpEdit = (lookUpEditBaseRecipeIdForParameters as LookUpEdit);
+            lookUpEdit.Properties.DataSource = dataSource;
+            lookUpEdit.Properties.DisplayMember = "name";
+            lookUpEdit.Properties.ValueMember = "id";
+            lookUpEdit.Properties.NullText = "All";
+
+            lookUpEdit.Properties.PopulateColumns();
+            lookUpEdit.Properties.Columns["id"].Caption = "ID";
+            lookUpEdit.Properties.Columns["id"].Visible = true;
+            lookUpEdit.Properties.Columns["id"].Width = 50;
+            lookUpEdit.Properties.Columns["name"].Caption = "Recipe Name";
+            lookUpEdit.Properties.Columns["name"].Visible = true;
+
+            lookUpEditBaseRecipeIdForParameters.EditValue = _currentBaseRecipeId;
+        }
+
+        // событие комбобокса
+        private void lookUpEditBaseRecipeIdForParameters_EditValueChanged(object sender, EventArgs e)
+        {
+            currentBaseRecipeIdFilter = lookUpEditBaseRecipeIdForParameters.EditValue as int?;
+
+            //var selectedId = (lookUpEditBaseRecipeIdForParameters as LookUpEdit)?.EditValue as int?;
+            if (currentBaseRecipeIdFilter == null)
+            {
+                gridControlStages.DataSource = new BindingList<StageGridItem>(_bindingList);
+            }
+            else
+            {
+                var filtered = _bindingList.Where(s => s.baseRecipeId == currentBaseRecipeIdFilter).OrderBy(s => s.id).ToList();
+                gridControlStages.DataSource = new BindingList<StageGridItem>(filtered);
+            }
+            gridViewStages.RefreshData(); // Обновить отображение
+        }
         #endregion
 
         #region Stuff
 
         // Получает список параметров с добавлением "Empty" в начало.
-        private List<ParameterItem> GetParameterListWithEmpty()
+        private List<ParameterItem> GetParameterListWithEmpty(StageGridItem row, int parameterIndex)
         {
+            // id текущего выбранного параметра в ComboBox
+            var currentId = row.ParameterIds[parameterIndex];
+
+            // Список id, которые уже выбраны (кроме текущего параметра)
+            var usedParameterIds = row.GetUsedParameterIdsExcept(parameterIndex); // <--- ВАЖНО!
+
+            // Фильтруем по baseRecipeId (если выбран фильтр)
             var parameterList = _baseParametersList
-                    .Select(p => new ParameterItem(p.id, p.name)) // Создаем объект ParameterItem
+                    .Where(p =>(currentBaseRecipeIdFilter == null || p.baseRecipeId == currentBaseRecipeIdFilter) 
+                        &&(!usedParameterIds.Contains(p.id) || (currentId.HasValue && p.id == currentId.Value))) // разрешаем текущее значение                        
+                    .Select(p => new ParameterItem(p.id, p.name, p.tag, p.baseRecipeId)) // Создаем объект ParameterItem
+                    .OrderBy(p => p.Id)
                     .ToList();
 
             // Добавляем "Empty" в начало списка
-            parameterList.Insert(0, new ParameterItem(null, "Empty")); // id типа int? (nullable)
+            parameterList.Insert(0, new ParameterItem(null, "Empty","", null)); // id типа int? (nullable)
             return parameterList;
         }
 
@@ -197,8 +304,9 @@ namespace TecxRecipeAX
                 id = stage.id,
                 name = stage.name,
                 description = stage.description,
-                ParameterIds = new int?[ParameterCount]
-            };
+                ParameterIds = new int?[ParameterCount],
+                baseRecipeId = stage.baseRecipeId
+    };
 
             var baseParamsList = stage.BaseParameters.ToList();
             for (int i = 0; i < baseParamsList.Count && i < ParameterCount; i++)
@@ -237,7 +345,8 @@ namespace TecxRecipeAX
             {
                 name = item.name,
                 description = item.description,
-                BaseParameters = GetParametersFromItem(item)
+                BaseParameters = GetParametersFromItem(item),
+                baseRecipeId = item.baseRecipeId
             };
             _context.BaseRecipeStages.Add(stage);
             await _context.SaveChangesAsync();
@@ -257,6 +366,7 @@ namespace TecxRecipeAX
                 stage.name = item.name;
                 stage.description = item.description;
                 stage.BaseParameters = GetParametersFromItem(item);
+                stage.baseRecipeId = item.baseRecipeId;
                 await _context.SaveChangesAsync();
             }
         }
@@ -284,13 +394,15 @@ namespace TecxRecipeAX
                     {
                         name = item.name,
                         description = item.description,
-                        BaseParameters = new List<BaseParameter>()
+                        BaseParameters = new List<BaseParameter>(),
+                        baseRecipeId = item.baseRecipeId
                     };
                     _context.BaseRecipeStages.Add(stage);
                 }
 
                 stage.description = item.description;
                 stage.name = item.name;
+                stage.baseRecipeId = item.baseRecipeId;
 
                 stage.BaseParameters.Clear();
 
@@ -350,6 +462,9 @@ namespace TecxRecipeAX
                 }
 
                 await _context.SaveChangesAsync();
+
+                // Обновляем источник данных после удаления
+                lookUpEditBaseRecipeIdForParameters_EditValueChanged(null, EventArgs.Empty);
             }
             catch (Exception ex)
             {
@@ -400,7 +515,6 @@ namespace TecxRecipeAX
         }
 
         #endregion
-
     }
 
     #region Classes
@@ -408,11 +522,15 @@ namespace TecxRecipeAX
     {
         public int? Id { get; set; }
         public string Name { get; set; }
+        public string Tag { get; set; }
+        public int? BaseRecipeId { get; set; }
 
-        public ParameterItem(int? id, string name)
+        public ParameterItem(int? id, string name, string tag, int? baseRecipeId)
         {
             Id = id;
             Name = name;
+            Tag = tag;
+            BaseRecipeId = baseRecipeId;
         }
     }
 
@@ -421,8 +539,15 @@ namespace TecxRecipeAX
         public int id { get; set; }
         public string name { get; set; }
         public string description { get; set; }
-
-        public int?[] ParameterIds { get; set; } = new int?[16];
+        public int? baseRecipeId { get; set; }
+        public int?[] ParameterIds { get; set; } = new int?[32];
+        public HashSet<int> GetUsedParameterIdsExcept(int indexToSkip)
+        {
+            return ParameterIds
+                .Where((id, idx) => idx != indexToSkip && id.HasValue)
+                .Select(id => id.Value)
+                .ToHashSet();
+        }
 
         public int? Parameter1Name { get => ParameterIds[0]; set => ParameterIds[0] = value; }
         public int? Parameter2Name { get => ParameterIds[1]; set => ParameterIds[1] = value; }
@@ -440,6 +565,22 @@ namespace TecxRecipeAX
         public int? Parameter14Name { get => ParameterIds[13]; set => ParameterIds[13] = value; }
         public int? Parameter15Name { get => ParameterIds[14]; set => ParameterIds[14] = value; }
         public int? Parameter16Name { get => ParameterIds[15]; set => ParameterIds[15] = value; }
+        public int? Parameter17Name { get => ParameterIds[16]; set => ParameterIds[16] = value; }
+        public int? Parameter18Name { get => ParameterIds[17]; set => ParameterIds[17] = value; }
+        public int? Parameter19Name { get => ParameterIds[18]; set => ParameterIds[18] = value; }
+        public int? Parameter20Name { get => ParameterIds[19]; set => ParameterIds[19] = value; }
+        public int? Parameter21Name { get => ParameterIds[20]; set => ParameterIds[20] = value; }
+        public int? Parameter22Name { get => ParameterIds[21]; set => ParameterIds[21] = value; }
+        public int? Parameter23Name { get => ParameterIds[22]; set => ParameterIds[22] = value; }
+        public int? Parameter24Name { get => ParameterIds[23]; set => ParameterIds[23] = value; }
+        public int? Parameter25Name { get => ParameterIds[24]; set => ParameterIds[24] = value; }
+        public int? Parameter26Name { get => ParameterIds[25]; set => ParameterIds[25] = value; }
+        public int? Parameter27Name { get => ParameterIds[26]; set => ParameterIds[26] = value; }
+        public int? Parameter28Name { get => ParameterIds[27]; set => ParameterIds[27] = value; }
+        public int? Parameter29Name { get => ParameterIds[28]; set => ParameterIds[28] = value; }
+        public int? Parameter30Name { get => ParameterIds[29]; set => ParameterIds[29] = value; }
+        public int? Parameter31Name { get => ParameterIds[30]; set => ParameterIds[30] = value; }
+        public int? Parameter32Name { get => ParameterIds[31]; set => ParameterIds[31] = value; }
     }
 
     public class ParameterColorProvider

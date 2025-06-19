@@ -14,6 +14,8 @@ namespace TechRecipeAX
         public int id { get; set; }
         public int numb { get; set; }
         public string name { get; set; } = string.Empty;
+        public int? baseRecipeId { get; set; }
+
         public virtual ICollection<RecipeStage> RecipeStages { get; set; }
     }
 }

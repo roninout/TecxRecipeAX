@@ -2,6 +2,7 @@
 using System.Data.Entity;
 using System.Data.Entity.ModelConfiguration.Conventions;
 using Npgsql;
+using TecxRecipeAX;
 
 namespace TechRecipeAX
 {
@@ -13,6 +14,7 @@ namespace TechRecipeAX
         public DbSet<RecipeParameter> RecipeParameters { get; set; }
         public DbSet<RecipeStage> RecipeStages { get; set; }
         public DbSet<Recipe> Recipes { get; set; }
+        public DbSet<RecipePage> RecipePages { get; set; }
 
         public RecipeDbContext(string connectionString)
             : base(new NpgsqlConnection(connectionString), contextOwnsConnection: true)
