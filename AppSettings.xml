@@ -5,6 +5,7 @@
   <CtApiIp>26.128.253.245</CtApiIp>
   <CtApiUser>Al</CtApiUser>
   <CtApiPassword>kip12345</CtApiPassword>
+  <CtApiRefreshData>5000</CtApiRefreshData>
 
   <!--Set tags for PLC-->
   <RecipeStageBase1Id>5</RecipeStageBase1Id>

@@ -53,6 +53,7 @@ namespace TecxRecipeAX
         public static string CtApiIp => GetSetting("CtApiIp");
         public static string CtApiUser => GetSetting("CtApiUser");
         public static string CtApiPassword => GetSetting("CtApiPassword");
+        public static string CtApiRefreshData => GetSetting("CtApiRefreshData");
 
         // Set tags for PLC
         public static string RecipeStageBase1Id => GetSetting("RecipeStageBase1Id");

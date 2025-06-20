@@ -306,16 +306,23 @@ namespace TechRecipeAX
             if (items.Any())
             {
                 var baseParameters = _context.BaseParameters.ToList(); // Загружаем BaseParameters один раз
-                var allParameters = items.SelectMany(item => item.Parameters.Keys).Distinct().ToList();
+
+                // Собираем все параметры из всех строк
+                var paramInfoList = items
+                    .SelectMany(item => item.Parameters.Values) // берем значения, а не ключи
+                    .GroupBy(p => p.BaseParameterId)
+                    .Select(g => g.First()) // уникальные по BaseParameterId
+                    .ToList();
 
                 // Сортировка по BaseParameter.type
-                var sortedParameters = allParameters
-                .Select(name =>
+                var sortedParameters = paramInfoList
+                .Select(p =>
                 {
-                    var paramInfo = baseParameters.FirstOrDefault(p => p.name == name);
+                    var paramInfo = baseParameters.FirstOrDefault(bp => bp.id == p.BaseParameterId);
                     return new
                     {
-                        Name = name,
+                        Id = p.BaseParameterId,
+                        Name = p.Name,
                         Type = paramInfo?.type ?? int.MaxValue,
                         Description = paramInfo?.description ?? "",
                         Kind = paramInfo.kind,
@@ -976,50 +983,6 @@ namespace TechRecipeAX
                 selectedRecipe = _context.Recipes.FirstOrDefault(r => r.id == selectedId);
         }
 
-        // создание нового рецепта на базе текущего -------------------------------------------------------------------------------
-        private void SavePlcRecipeAsNew(string newRecipeName)
-        {
-            if (recipeToPLC == null || string.IsNullOrWhiteSpace(newRecipeName))
-            {
-                MessageBox.Show("Невозможно сохранить рецепт. Проверьте данные и имя.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            var newRecipe = new Recipe
-            {
-                name = newRecipeName,
-                //created = DateTime.Now,
-                RecipeStages = new List<RecipeStage>()
-            };
-
-            foreach (var plcStage in recipeToPLC.Stages.OrderBy(s => s.StageNumb))
-            {
-                var newStage = new RecipeStage
-                {
-                    name = plcStage.Name,
-                    stageNumb = plcStage.StageNumb,
-                    auto = plcStage.Auto,
-                    RecipeParameters = new List<RecipeParameter>()
-                };
-
-                foreach (var param in plcStage.Parameters)
-                {
-                    newStage.RecipeParameters.Add(new RecipeParameter
-                    {
-                        name = param.Name,
-                        value = param.Value
-                    });
-                }
-
-                newRecipe.RecipeStages.Add(newStage);
-            }
-
-            _context.Recipes.Add(newRecipe);
-            _context.SaveChanges();
-
-            MessageBox.Show($"Рецепт «{newRecipeName}» успешно сохранён.", "Готово", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
         // отвечает за вычитку стадий и параметром по selectedRecipe
         private void LoadRecipeStagesAndParameters(int recipeId)
         {
@@ -1047,6 +1010,7 @@ namespace TechRecipeAX
                     {
                         item.Parameters[param.name] = new ParamInfo
                         {
+                            BaseParameterId = param.baseParameterId,
                             Name = param.name,
                             Value = param.value
                         };
@@ -1179,6 +1143,7 @@ namespace TechRecipeAX
                             var baseParam = baseParams.FirstOrDefault(b => b.name == p.name);
                             return new ParamInfo
                             {
+                                BaseParameterId = baseParam.id,
                                 Name = p.name,
                                 Value = p.value,
                                 Tag = baseParam?.tag,
@@ -1555,8 +1520,7 @@ namespace TechRecipeAX
         private void InitializePlcReadTimer()
         {
             _plcReadCts = new CancellationTokenSource();
-
-            _plcReadTimer.Interval = 10_000; // 10 секунд
+            _plcReadTimer.Interval = int.TryParse(ConfigHelper.CtApiRefreshData, out int interval) ? interval : 10_000; // 10 секунд по дефолту            
             _plcReadTimer.Tick += async (s, e) => await ReadPlcPeriodically(_plcReadCts.Token);
             _plcReadTimer.Start();
         }
