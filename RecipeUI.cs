@@ -23,6 +23,7 @@ using DevExpress.XtraExport.Xls;
 using TecxRecipeAX.Properties;
 using DevExpress.XtraEditors.Repository;
 using DevExpress.DocumentView;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace TechRecipeAX
 {
@@ -46,9 +47,10 @@ namespace TechRecipeAX
 
         private readonly SemaphoreSlim _plcReadLock = new SemaphoreSlim(1, 1);
         private CancellationTokenSource _plcReadCts;
-        private readonly System.Windows.Forms.Timer _plcReadTimer = new System.Windows.Forms.Timer();
+        private System.Threading.Timer _plcReadTimer;
         private RecipePLC recipeToPLC;
         public int currentBaseRecipeId;
+        public int currentRecipeId;
 
         public event Action<string> PageNameStrPropertyChanged;
         public event Action<int> CurStageIntPropertyChanged;
@@ -139,7 +141,7 @@ namespace TechRecipeAX
 
         private async Task InitializeAsync()
         {
-            Logger.Info(@" -------------------- Начало инициализации приложения ---------------- ");
+            Logger.Info(@" -------------------- Початок иніціалізації програми ---------------- ");
 
             try
             {
@@ -151,13 +153,15 @@ namespace TechRecipeAX
 
                 // вызываем SetSelectedRecipe(PageNameStrProperty) по изменению значения
                 SubscribeToPageNamePropertyChanged();
+                // Подписываемся на событие изменения внешнего параметра
+                SubscribeToCurStageIntPropertyChanged();
 
-                InitializePlcReadTimer(); // запус
-                Logger.Info(@"Инициализация приложения завершена успешно");
+                InitializePlcReadTimer(); // запуск
+                Logger.Info(@"Ініціалізація програми закінчилася успішно");
             }
             catch (Exception ex)
             {
-                Logger.Error($"Ошибка при инициализации приложения: {ex.Message}\n{ex.StackTrace}");
+                Logger.Error($"Помилка при ініціалізації програми: {ex.Message}\n{ex.StackTrace}");
                 throw;
             }
         }
@@ -167,46 +171,55 @@ namespace TechRecipeAX
             try
             {
                 string connectionString = ConfigHelper.GetConnectionString();
-                Logger.Debug($"Получена строка подключения: {connectionString}");
+                Logger.Debug($"Отримана строка підключення: {connectionString}");
 
                 _context = new RecipeDbContext(connectionString);
 
                 // Проверяем подключение асинхронно
                 await _context.Database.Connection.OpenAsync();
-                Logger.Info($"Версия SQL Server: {_context.Database.Connection.ServerVersion}");
+                Logger.Info($"Версія SQL Server: {_context.Database.Connection.ServerVersion}");
                 _context.Database.Connection.Close();
 
             }
             catch (System.Exception ex)
             {
-                Logger.Error($"Ошибка подключения к БД: {ex.Message}");
+                Logger.Error($"Помилка підключення до БД: {ex.Message}");
 
                 // Обработка ошибок подключения
-                toolStripStatusLabel1.Text = $"Ошибка подключения к БД: {ex.Message}";
-                toolStripStatusLabel1.ForeColor = Color.Red;
+                //toolStripStatusLabel1.SafeInvoke(() =>
+                //{
+                    toolStripStatusLabel1.Text = $"Помилка підключення до БД: {ex.Message}";
+                    toolStripStatusLabel1.ForeColor = Color.Red;
+                //});
                 throw; // Можно обработать иначе, в зависимости от требований
             }
         }
 
         private async Task LoadDataAsync()
         {
-            Logger.Info("Старт асинхронной загрузки данных");
+            Logger.Info("Початок асинхронного завантаження даних");
 
             try
             {
                 if (_context == null) { await InitializeDbContextAsync(); }
 
-                toolStripStatusLabel1.Text = "Подключение к базе данных...";
-                toolStripStatusLabel1.ForeColor = Color.Black;
+                //toolStripStatusLabel1.SafeInvoke(() =>
+                //{
+                    toolStripStatusLabel1.Text = "Підключення до бази даних...";
+                    toolStripStatusLabel1.ForeColor = Color.Black;
+                //});
 
-                progressBarControl1.Visible = true;
-                progressBarControl1.EditValue = 0;
+                //progressBarControl1.SafeInvoke(() =>
+                //{
+                    progressBarControl1.Visible = true;
+                    progressBarControl1.EditValue = 0;
+                //});
 
                 int totalItems = await _context.RecipeStages.CountAsync();
                 int currentItem = 0;
 
                 var stages = await _context.RecipeStages.ToListAsync();
-                Logger.Debug($"Загружено {stages.Count} записей");
+                Logger.Debug($"Завантаження {stages.Count} записів");
 
                 foreach (var stage in stages)
                 {
@@ -215,17 +228,25 @@ namespace TechRecipeAX
                     await Task.Delay(5);
                 }
 
+                //progressBarControl1.SafeInvoke(() => progressBarControl1.Visible = false);
                 progressBarControl1.Visible = false;
                 gridControlStages.Visible = true;
-                toolStripStatusLabel1.Text = "Подключение установлено.";
-                toolStripStatusLabel1.ForeColor = Color.Green;
-                Logger.Info("Данные успешно загружены.");
+                //toolStripStatusLabel1.SafeInvoke(() =>
+                //{
+                    toolStripStatusLabel1.Text = "Підключення встановлено.";
+                    toolStripStatusLabel1.ForeColor = Color.Green;
+                //});
+                Logger.Info("Дані успішно завантажені.");
             }
             catch (System.Exception ex)
             {
-                Logger.Error("Ошибка при загрузке данных");
-                toolStripStatusLabel1.Text = $"Ошибка: {ex.Message}";
-                toolStripStatusLabel1.ForeColor = Color.Red;
+                Logger.Error("Помилка при завантажені даних");
+                toolStripStatusLabel1.SafeInvoke(() =>
+                {
+                    toolStripStatusLabel1.Text = $"Помилка: {ex.Message}";
+                    toolStripStatusLabel1.ForeColor = Color.Red;
+                });
+                //progressBarControl1.SafeInvoke(() => progressBarControl1.Visible = false);
                 progressBarControl1.Visible = false;
             }
         }
@@ -234,7 +255,15 @@ namespace TechRecipeAX
         {
             _ctApi = new CtApi();
             _ctApi.SetCtApiDirectory(ConfigHelper.CtApiPath);
-            await _ctApi.OpenAsync(ConfigHelper.CtApiIp, ConfigHelper.CtApiUser, ConfigHelper.CtApiPassword);
+            
+            if (string.IsNullOrEmpty(ConfigHelper.CtApiIp))
+            {
+                await _ctApi.OpenAsync();
+            }
+            else
+            {
+                await _ctApi.OpenAsync(ConfigHelper.CtApiIp, ConfigHelper.CtApiUser, ConfigHelper.CtApiPassword, 0);
+            }
 
             var findResult = await _ctApi.FindAsync("Tag", "Tag=*S01_Recipe*", "", "TAG");
         }
@@ -244,18 +273,45 @@ namespace TechRecipeAX
         #region External properties events
         private void SubscribeToPageNamePropertyChanged()
         {
-            // Проверим, не подписались ли уже (если нужно)
-            PageNameStrPropertyChanged += (newValue) =>
-            {
-                Logger.Info($"PageNameStrProperty изменился: {newValue}");
-                SetSelectedRecipe(newValue);
-            };
-
-            // Если значение уже есть — обработаем сразу
             if (!string.IsNullOrEmpty(PageNameStrProperty))
             {
+                // Если значение уже есть, обработать сразу и не подписываться
                 SetSelectedRecipe(PageNameStrProperty);
+                return;
             }
+
+            Action<string> handler = null;
+            handler = (newValue) =>
+            {
+                Logger.Info($"PageNameStrProperty змінився: {newValue}");
+                if (!string.IsNullOrEmpty(newValue))
+                {
+                    SetSelectedRecipe(newValue);
+                    // Отписываемся сразу после первого ненулевого значения
+                    PageNameStrPropertyChanged -= handler;
+                }
+            };
+
+            PageNameStrPropertyChanged += handler;
+
+            //// Проверим, не подписались ли уже (если нужно)
+            //PageNameStrPropertyChanged += (newValue) =>
+            //{
+            //    Logger.Info($"PageNameStrProperty изменился: {newValue}");
+            //    SetSelectedRecipe(newValue);
+            //};
+
+            //// Если значение уже есть — обработаем сразу
+            //if (!string.IsNullOrEmpty(PageNameStrProperty))
+            //{
+            //    SetSelectedRecipe(PageNameStrProperty);
+            //}
+        }
+
+        private void SubscribeToCurStageIntPropertyChanged()
+        {
+            // Проверим, не подписались ли уже (если нужно)
+            CurStageIntPropertyChanged += (newValue) =>{};
         }
         #endregion
 
@@ -280,13 +336,17 @@ namespace TechRecipeAX
             gridViewStages.Appearance.HeaderPanel.Font = new Font(gridViewStages.Appearance.HeaderPanel.Font, FontStyle.Bold);
             gridViewStages.Appearance.HeaderPanel.TextOptions.HAlignment = DevExpress.Utils.HorzAlignment.Center;
 
-            gridViewStages.BestFitColumns();
+            //gridViewStages.BestFitColumns();
         }
 
         // инициализация колонок в таблице
         private void CreateGridColumns(BindingList<StageGridItem> items)
         {
+            if (gridControlStages.Disposing || gridControlStages.IsDisposed)
+                return;
+
             var gridView = gridViewStages;
+            gridView.BeginUpdate();
             gridView.Columns.Clear();
 
             // Столбец №
@@ -299,8 +359,8 @@ namespace TechRecipeAX
             var colStageName = gridView.Columns.AddVisible(nameof(StageGridItem.name), "Стадія");
             colStageName.OptionsColumn.AllowEdit = true;
             colStageName.UnboundType = DevExpress.Data.UnboundColumnType.String;
-            colStageName.Width = 175; // 150
-            colStageName.OptionsColumn.FixedWidth = true;
+            colStageName.Width = int.Parse(ConfigHelper.ColumnParameterStageWidth); // 300
+            colStageName.OptionsColumn.FixedWidth = true;            
 
             // Теперь динамические параметры
             if (items.Any())
@@ -325,7 +385,7 @@ namespace TechRecipeAX
                         Name = p.Name,
                         Type = paramInfo?.type ?? int.MaxValue,
                         Description = paramInfo?.description ?? "",
-                        Kind = paramInfo.kind,
+                        Kind = paramInfo?.kind,
                         Format = paramInfo?.format
                     };
                 })
@@ -350,11 +410,12 @@ namespace TechRecipeAX
                         col.DisplayFormat.FormatType = DevExpress.Utils.FormatType.Numeric;
                         col.DisplayFormat.FormatString = param.Format.Value.ToString() == "Default" ? "" : param.Format.Value.ToString(); // N2
                         //col.Width = 57; // 100
+                        col.Width = int.Parse(ConfigHelper.ColumnParameterInputFieldWidth); // 57
                     }
                     if (param.Kind == ParamKind.CheckBox)
                     {
                         col.UnboundType = DevExpress.Data.UnboundColumnType.Boolean;
-                        col.Width = 40; // 100
+                        col.Width = int.Parse(ConfigHelper.ColumnParameterCheckBoxWidth); // 40
                         col.AppearanceHeader.TextOptions.WordWrap = DevExpress.Utils.WordWrap.Wrap;                        
                         col.Caption = string.Join("\n", param.Name.ToCharArray()); // Разбиваем текст заголовка по буквам с переносом
                         col.OptionsColumn.FixedWidth = true;
@@ -362,23 +423,11 @@ namespace TechRecipeAX
                 }
             }
 
-            // Столбец Auto
-            var colStageAuto = gridView.Columns.AddVisible(nameof(StageGridItem.auto), "Auto");
-            colStageAuto.OptionsColumn.AllowEdit = true;
-            colStageAuto.Width = 40;
-            colStageAuto.OptionsColumn.FixedWidth = true;
-            // Поворачиваем текст в заголовке на 90 градусов
-            colStageAuto.AppearanceHeader.TextOptions.WordWrap = DevExpress.Utils.WordWrap.Wrap;
-            colStageAuto.AppearanceHeader.TextOptions.HAlignment = DevExpress.Utils.HorzAlignment.Center;
-            colStageAuto.AppearanceHeader.TextOptions.VAlignment = DevExpress.Utils.VertAlignment.Top;
-            // Разбиваем текст заголовка по буквам с переносом
-            colStageAuto.Caption = string.Join("\n", "Auto".ToCharArray());
-
-
             // отображение значений в ячейках по центру, кроме колонки "name"
             foreach (GridColumn column in gridViewStages.Columns)
                 column.AppearanceCell.TextOptions.HAlignment = column.FieldName != "name" ? DevExpress.Utils.HorzAlignment.Center : DevExpress.Utils.HorzAlignment.Default;
             //gridView.BestFitColumns();
+            gridViewStages.EndUpdate();
         }
 
         // событие выделение строки зеленым цветом
@@ -545,23 +594,53 @@ namespace TechRecipeAX
         // событие для отлавливание изменений в колоках auto и name
         private void gridViewStages_CellValueChanged(object sender, CellValueChangedEventArgs e)
         {
-            // Проверяем, что изменена колонка 'auto'
-            if (e.Column.FieldName == "auto")
-            {
-                var item = stageGridItems[e.RowHandle];
-                item.auto = (bool)e.Value;  // Обновляем значение 'auto' в StageGridItem
+            //// Проверяем, что изменена колонка 'auto'
+            //if (e.Column.FieldName == "auto")
+            //{
+            //    var item = stageGridItems[e.RowHandle];
+            //    item.auto = (bool)e.Value;  // Обновляем значение 'auto' в StageGridItem
 
-                // Сохраняем изменения в базе данных
-                SaveStageAutoToDatabase(item.RecipeStageId, item.auto);
-            }
+            //    // Сохраняем изменения в базе данных
+            //    SaveStageAutoToDatabase(item.RecipeStageId, item.auto);
+            //}
             // Проверяем, что изменена колонка 'name'
-            else if (e.Column.FieldName == "name")
+            if (e.Column.FieldName == "name")
             {
                 var item = stageGridItems[e.RowHandle];
                 item.name = (string)e.Value;  // Обновляем значение 'name' в StageGridItem
 
                 // Сохраняем изменения в базе данных
                 SaveStageNameToDatabase(item.RecipeStageId, item.name);
+            }
+        }
+
+        // добавил для отлавливания chekbox
+        private void gridViewStages_CellValueChanging(object sender, CellValueChangedEventArgs e)
+        {
+            var view = sender as GridView;
+            if (view == null || e.RowHandle < 0)
+                return;
+
+            // Проверяем, является ли колонка булевой
+            if (e.Column.UnboundType == DevExpress.Data.UnboundColumnType.Boolean)
+            {
+                // Принудительно сохраняем значение немедленно
+                gridViewStages.PostEditor(); // фиксирует новое значение в модели
+                gridViewStages.UpdateCurrentRow(); // обновляет данные в Row
+
+                // Теперь можно вызвать логику сохранения немедленно
+                var item = stageGridItems[e.RowHandle];
+                string paramName = e.Column.FieldName;
+                if (item.Parameters.TryGetValue(paramName, out var param))
+                {
+                    double newValue = (bool)e.Value ? 1 : 0;
+                    param.Value = newValue;
+
+                    if (isShowingPLCData)
+                        WriteSingleTagToPLC(item, paramName, newValue);
+                    else
+                        SaveParameterValueToDatabase(item.RecipeStageId, paramName, newValue);
+                }
             }
         }
 
@@ -582,7 +661,13 @@ namespace TechRecipeAX
         #region ComboBox
         private void LoadRecipeComboBox()
         {
-            var recipes = _context.Recipes.Where(r => r.baseRecipeId == currentBaseRecipeId && r.id != currentBaseRecipeId).ToList();
+            var recipes = _context.Recipes
+            .Where(r => r.baseRecipeId == currentBaseRecipeId && r.id != currentBaseRecipeId && r.name
+            .Contains(PageNameStrProperty))
+            .OrderBy(r => r.name) // Сортировка по имени
+            .ToList();
+
+            lookUpEditRecipe.Properties.BeginUpdate();
 
             lookUpEditRecipe.Properties.DataSource = recipes;
             lookUpEditRecipe.Properties.DisplayMember = "name";
@@ -590,7 +675,8 @@ namespace TechRecipeAX
 
             // Только одна колонка с именем
             lookUpEditRecipe.Properties.Columns.Clear();
-            lookUpEditRecipe.Properties.Columns.Add(new LookUpColumnInfo("name", "Рецепт"));
+            lookUpEditRecipe.Properties.Columns.Add(new LookUpColumnInfo("id", "Id") { Width = 25 });
+            lookUpEditRecipe.Properties.Columns.Add(new LookUpColumnInfo("name", "Recipe Name") { Width = 125 });
 
             // Убираем заголовок, если не нужен
             lookUpEditRecipe.Properties.ShowHeader = false;
@@ -598,10 +684,47 @@ namespace TechRecipeAX
             // Устанавливаем первый элемент по умолчанию
             if (recipes.Count > 0)
             {
-                lookUpEditRecipe.EditValue = selectedRecipe.id;
+                //if (lookUpEditRecipe != null && lookUpEditRecipe.EditValue != null)
+                if (lookUpEditRecipe != null)
+                {
+                    lookUpEditRecipe.EditValue = selectedRecipe?.id;
+                }
+            }
+            lookUpEditRecipe.Properties.EndUpdate();
+        }
+
+        // для кастомного отображения item в комбобоксе
+        private void lookUpEditRecipe_CustomDisplayText(object sender, CustomDisplayTextEventArgs e)
+        {
+            if (lookUpEditRecipe?.Properties?.DataSource != null)
+            {
+                if (lookUpEditRecipe.GetSelectedDataRow() is Recipe recipe)
+                {
+                    e.DisplayText = $"[{recipe.id}] {recipe.name}";
+                }
+            }
+            else
+            {
+                e.DisplayText = string.Empty;
             }
         }
 
+        // можно сделать толстым шрифтом, но тормозит (not used)
+        private void lookUpEditRecipe_CustomDrawCell(object sender, DevExpress.XtraEditors.Popup.LookUpCustomDrawCellArgs e)
+        {
+            if (e.Row == null || e.Column == null) return;
+
+            var recipe = e.Row as Recipe;
+            if (recipe == null) return;
+
+            if (selectedRecipe != null && selectedRecipe.id == recipe.id)
+                e.Appearance.Font = new Font(e.Appearance.Font, FontStyle.Bold);
+            if (currentRecipeId == recipe.id)
+                e.Appearance.ForeColor = Color.Green;
+
+        }
+
+        // смена item в комбобоксе
         private void lookUpEditRecipe_EditValueChanged(object sender, EventArgs e)
         {
             if (lookUpEditRecipe.EditValue != null)
@@ -611,11 +734,14 @@ namespace TechRecipeAX
 
                 if (selectedRecipe != null)
                 {
+                    var headerText = $"Редагування: [{selectedRecipe.id}] {selectedRecipe.name}";
                     LoadRecipeStagesAndParameters(selectedRecipe.id);
-                    textEditRecipeName.EditValue = $"[DB] {selectedRecipe.name}";
+                    textEditRecipeName.EditValue = headerText;
 
-                    var findRecipe = _context.RecipePages.FirstOrDefault(rp => rp.baseRecipeId == currentBaseRecipeId && rp.page == pageNameStrProperty);
-                    btnAssignRecipeToPages.Enabled = findRecipe.recipeId != selectedId;
+                    //var findRecipe = _context.RecipePages.FirstOrDefault(rp => rp.baseRecipeId == currentBaseRecipeId && rp.page == pageNameStrProperty);
+                    //textEditRecipeName.EditValue = findRecipe.recipeId != selectedId ? headerText : $"*{headerText} (поточний)";
+
+                    //btnAssignRecipeToPages.Enabled = findRecipe.recipeId != selectedId;
                 }
             }
         }
@@ -684,7 +810,7 @@ namespace TechRecipeAX
             btnEditParameters.Visible = type && RecipeAccessIntProperty > 2;
             btnEditStages.Visible = type && RecipeAccessIntProperty > 2;
             btnEditRecipe.Visible = type && RecipeAccessIntProperty > 1;
-            btnDataToPlc.Visible = type && RecipeAccessIntProperty > 1;
+            btnDataToPlc.Visible = false; //type && RecipeAccessIntProperty > 1;
 
             lookUpEditRecipe.Visible = type && RecipeAccessIntProperty > 1;
             btnAssignRecipeToPages.Visible = type && RecipeAccessIntProperty > 1;
@@ -715,9 +841,18 @@ namespace TechRecipeAX
         // создание и редактирование рецептов
         private void btnEditRecipe_Click(object sender, EventArgs e)
         {
-            using (var form = new RecipeEditForm(_context, currentBaseRecipeId, selectedRecipe, RecipeAccessIntProperty))
+            using (var form = new RecipeEditForm(_context, currentBaseRecipeId, selectedRecipe, RecipeAccessIntProperty, PageNameStrProperty, currentRecipeId))
             {
                 form.ShowDialog();
+            }
+
+            // После закрытия формы, обновляем рецепт в памяти
+            if (selectedRecipe != null)
+            {
+                //lookUpEditRecipe.EditValue = selectedRecipe?.id;
+                LoadRecipeComboBox();
+                lookUpEditRecipe_EditValueChanged(lookUpEditRecipe, EventArgs.Empty); // Принудительно вызываем обработчик, если он есть
+
             }
         }
 
@@ -738,7 +873,7 @@ namespace TechRecipeAX
         }
 
         // Записать параметры в PLC
-        private void btnDataToPlc_Click(object sender, EventArgs e)
+        private async void btnDataToPlc_Click(object sender, EventArgs e)
         {
             if (RecipeModeIntProperty)
             {
@@ -755,7 +890,8 @@ namespace TechRecipeAX
 
             if (!writeToPLC)
             {
-                WriteToPLC(paramDictionary);
+                await ResetStagesParamTagsForPLC(plcData); // обнуляем параметры стадий перед записью
+                await WriteToPLC(paramDictionary); // записываем параметры в контроллер
                 XtraMessageBox.Show($"Рецепт «{selectedRecipe.name}» успішно завантажений до контроллера", "Увага", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
@@ -779,7 +915,7 @@ namespace TechRecipeAX
 
                 checkBoxShowPLC.ImageOptions.SvgImage = Resources.electronics_desktopmac;
                 textEditRecipeName.ForeColor = Color.Gray; //Color.FromArgb(64, 64, 64);
-                textEditRecipeName.EditValue = $"[PLC] {selectedRecipe.name}";
+                textEditRecipeName.EditValue = $"[{selectedRecipe.id}] {selectedRecipe.name}";
             }
             else
             {
@@ -787,7 +923,7 @@ namespace TechRecipeAX
 
                 checkBoxShowPLC.ImageOptions.SvgImage = Resources.editdatasource;
                 textEditRecipeName.ForeColor = Color.Orange;
-                textEditRecipeName.EditValue = $"[DB] {selectedRecipe.name}";
+                textEditRecipeName.EditValue = $"Редагування: [{selectedRecipe.id}] {selectedRecipe.name}";
             }
 
             UpdateButtonsState(!isShowingPLCData); // делаем кнопки неактивными
@@ -811,6 +947,7 @@ namespace TechRecipeAX
             }
 
             // Вызываем событие checkBoxShowPLC_CheckedChanged
+            LoadRecipeStagesAndParameters(selectedRecipe.id);
             checkBoxShowPLC_CheckedChanged(checkBoxShowPLC, EventArgs.Empty);
         }
 
@@ -893,7 +1030,7 @@ namespace TechRecipeAX
         }
 
         // устанавливать recipeId в таблице RecipePage
-        private void btnAssignRecipeToPages_Click(object sender, EventArgs e)
+        private async void btnAssignRecipeToPages_Click(object sender, EventArgs e)
         {
             if (selectedRecipe == null)
             {
@@ -904,6 +1041,12 @@ namespace TechRecipeAX
             if (string.IsNullOrWhiteSpace(pageNameStrProperty))
             {
                 XtraMessageBox.Show("Ім'я сторінки не вказано.", "Увага", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (RecipeModeIntProperty)
+            {
+                XtraMessageBox.Show($"Завантаження рецепту до PLC можливо лише в ручному режимі реактора/пермікса!", "Увага", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -920,6 +1063,7 @@ namespace TechRecipeAX
             }
             else
             {
+                // назначаем рецепт как текущий -------------------------------------------
                 findRecipe.recipeId = selectedRecipe.id;
                 _context.SaveChanges();
 
@@ -928,8 +1072,21 @@ namespace TechRecipeAX
                 // обновим представление
                 LoadRecipeFromDatabase();
 
-                btnAssignRecipeToPages.Enabled = findRecipe.recipeId != Convert.ToInt32(lookUpEditRecipe.EditValue);
-                XtraMessageBox.Show("Рецепт успішно призначений як поточний.","Увага", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // сохраняем данные в контроллер -----------------------------------------
+                var plcData = PrepareRecipeDate();
+                var paramDictionary = CreateParamTagsForPLC(plcData);
+
+                if (!writeToPLC)
+                {
+                    await ResetStagesParamTagsForPLC(plcData); // обнуляем параметры стадий перед записью
+                    await WriteToPLC(paramDictionary);         // записываем параметры в контроллер
+                    Logger.Info($"Рецепт «{selectedRecipe.name}» успішно завантажений до контроллера");
+                }
+                else
+                    Logger.Warning("Я ще не закінчив писати в PLC!!!!");
+
+                //btnAssignRecipeToPages.Enabled = findRecipe.recipeId != Convert.ToInt32(lookUpEditRecipe.EditValue);
+                XtraMessageBox.Show($"Рецепт успішно призначений як поточний. {selectedRecipe.RecipeStages.Count}","Увага", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -941,6 +1098,7 @@ namespace TechRecipeAX
         private void SetSelectedRecipe(string pageName)
         {
             int selectedId = _context.RecipePages.FirstOrDefault(r => r.page == pageName).recipeId;
+            currentRecipeId = selectedId; // запоминаем как глобальную переменную
             currentBaseRecipeId = _context.RecipePages.FirstOrDefault(r => r.recipeId == selectedId).baseRecipeId; // запоминаем как глобальную переменную
 
             if (selectedId == 0)
@@ -959,7 +1117,7 @@ namespace TechRecipeAX
 
                     checkBoxShowPLC.ImageOptions.SvgImage = Resources.editdatasource;
                     textEditRecipeName.ForeColor = Color.Orange;
-                    textEditRecipeName.EditValue = $"[DB] {selectedRecipe.name}";
+                    textEditRecipeName.EditValue = $"Редагування: [{selectedRecipe.id}] {selectedRecipe.name}";
                 }
                 else
                 {
@@ -1018,8 +1176,10 @@ namespace TechRecipeAX
 
                     stageGridItems.Add(item);
                 }
-
+                gridControlStages.BeginUpdate();
+                gridControlStages.DataSource = null;
                 gridControlStages.DataSource = stageGridItems;
+                gridControlStages.EndUpdate();
                 CreateGridColumns(stageGridItems);
                 RefreshGridColumns();
             }
@@ -1119,7 +1279,7 @@ namespace TechRecipeAX
                 if (focusedRowHandle >= 0 && focusedRowHandle < gridViewStages.RowCount)
                     gridViewStages.FocusedRowHandle = focusedRowHandle;
 
-                Logger.Info("Данные с PLC в таблицу загружены успешно!");
+                //Logger.Info("Данные с PLC в таблицу загружены успешно!");
             }));
         }
 
@@ -1260,6 +1420,49 @@ namespace TechRecipeAX
             //LoadRecipeComboBox();
         }
 
+        public void CloseActiveX()
+        {
+            Logger.Info("Dispose begin!!!");
+
+            try
+            {
+                if (gridControlStages != null)
+                {
+                    gridControlStages.Visible = false; // предотвратит перерисовку
+                    gridControlStages.Parent = null;   // удалит из иерархии
+                    gridControlStages.DataSource = null;
+                    gridControlStages.MainView = null; // убирает GridView
+                    gridControlStages.Dispose();
+                    Logger.Info("GridControl - Disposed!");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error during GridControl dispose: {ex}");
+            }
+
+            // Освобождаем PLC API
+            if (_ctApi != null)
+            {
+                _ctApi.Dispose();
+                _ctApi = null;
+                Logger.Info("CTApi - Disposed!");
+            }
+
+            // Освобождаем таймер
+            if (_plcReadTimer != null)
+            {
+                _plcReadTimer.Dispose();
+                _plcReadTimer = null;
+                Logger.Info("Threading.Timer - Disposed!");
+            }
+            _plcReadCts?.Cancel();
+            _plcReadCts?.Dispose();
+            _plcReadCts = null;
+
+            Logger.Info("Dispose end!!!");
+        }
+
         #endregion
 
         #region PLC
@@ -1364,24 +1567,83 @@ namespace TechRecipeAX
                 }
             }
 
-            Logger.Info($"Результат CreateTagsForPLC: Рецепт: ID={recipe.RecipeId}, Name=\"{recipe.RecipeName}\"");
-            foreach (var kvp in result.OrderBy(k => k.Key))
-            {
-                Logger.Info($"  {kvp.Key} = {kvp.Value}");
-            }
+            Logger.Info($"CreateTagsForPLC: Рецепт: ID={recipe.RecipeId}, Name=\"{recipe.RecipeName}\" завершено успішно!");
+            //foreach (var kvp in result.OrderBy(k => k.Key))
+            //{
+            //    Logger.Info($"  {kvp.Key} = {kvp.Value}");
+            //}
 
             return result;
         }
 
+        // преобразовывем RecipeToPLC в теги для PLC + логирование
+        private async Task ResetStagesParamTagsForPLC(RecipePLC recipe)
+        {
+            if (recipe == null || recipe.Stages == null)
+            {
+                return;
+            }
+
+            foreach (var stage in recipe.Stages)
+            {
+                if (string.IsNullOrWhiteSpace(stage.Tag))
+                {
+                    Logger.Warning($"Stage {stage.Name} не имеет Tag. Пропуск.");
+                    continue;
+                }
+
+                Logger.Info($"Начато обнуление тегов в PLC перед записью рецепта... {stage.Name}");
+
+                // Берем все теги из BaseParameter, где baseRecipeId совпадает с текущим
+                var tagsToReset = _context.BaseParameters
+                    .Where(bp => bp.baseRecipeId == currentBaseRecipeId && !string.IsNullOrEmpty(bp.tag))
+                    .Select(bp => bp.tag)
+                    .Distinct()
+                    .ToList();
+
+                string plcTagName = "";
+
+                // Обнуляем тег NUM в 50-и стадиях
+                for (int i = 1; i < 50; i++)
+                {
+                    try
+                    {
+                        plcTagName = $"{stage.Tag}_{i}_NUM";
+                        await _ctApi.TagWriteAsync(plcTagName, "0", false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error($"Ошибка при обнулении тега {plcTagName}: {ex.Message}");
+                    }
+                }
+
+                // обнуляем все теги для текущих стадий
+                foreach (var tag in tagsToReset.OrderBy(t => t))
+                {
+                    try
+                    {
+                        plcTagName = $"{stage.Tag}_{stage.StageNumb}_{tag}";
+                        await _ctApi.TagWriteAsync(plcTagName, "0", false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error($"Ошибка при обнулении тега {tag}: {ex.Message}");
+                    }
+                }
+            }
+
+            Logger.Info($"Обнуление тегов в PLC завершено успешно.");
+        }
+
         // записать рецепт в PlanScada - CtApi
-        private async void WriteToPLC(Dictionary<string, string> paramTags)
+        private async Task WriteToPLC(Dictionary<string, string> paramTags)
         {
             writeToPLC = true;
 
             try
             {
                 foreach (var paramTag in paramTags.OrderBy(k => k.Key))
-                    await _ctApi.TagWriteAsync(paramTag.Key, paramTag.Value);
+                    await _ctApi.TagWriteAsync(paramTag.Key, paramTag.Value, false);
             }
             catch (Exception ex)
             {
@@ -1450,7 +1712,7 @@ namespace TechRecipeAX
                 }
             }
 
-            Logger.Info("Обновляем данные с PLC в recipeFromPLC");
+            //Logger.Info("Обновляем данные с PLC в recipeFromPLC");
         }
 
         // вычитываем данные из PLC
@@ -1507,7 +1769,7 @@ namespace TechRecipeAX
 
             try
             {
-                _ctApi.TagWrite(fullTag, newValue.ToString());
+                _ctApi.TagWrite(fullTag, newValue.ToString(), true);
             }
             catch (System.Exception) { }
         }
@@ -1519,10 +1781,15 @@ namespace TechRecipeAX
         // инициализация таймера и запуск чтения данных, если isShowingPLCData = true
         private void InitializePlcReadTimer()
         {
+            _plcReadCts?.Cancel();
+            _plcReadCts?.Dispose();
             _plcReadCts = new CancellationTokenSource();
-            _plcReadTimer.Interval = int.TryParse(ConfigHelper.CtApiRefreshData, out int interval) ? interval : 10_000; // 10 секунд по дефолту            
-            _plcReadTimer.Tick += async (s, e) => await ReadPlcPeriodically(_plcReadCts.Token);
-            _plcReadTimer.Start();
+
+            _plcReadTimer?.Dispose();
+
+            var interval = int.TryParse(ConfigHelper.CtApiRefreshData, out int i) ? i : 10_000;
+
+            _plcReadTimer = new System.Threading.Timer(async _ =>{await ReadPlcPeriodically(_plcReadCts.Token);}, null, 0, interval);
         }
 
         // чтение данных с PLC с контролем поточности
@@ -1709,9 +1976,5 @@ namespace TechRecipeAX
             public Dictionary<string, ParamInfo> Parameters { get; set; } = new Dictionary<string, ParamInfo>();
         }
 
-        private void RecipeUI_Load(object sender, EventArgs e)
-        {
-
-        }
     }
 }

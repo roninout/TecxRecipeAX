@@ -17,6 +17,7 @@
             {
                 components.Dispose();
             }
+
             base.Dispose(disposing);
         }
 
@@ -64,7 +65,7 @@
             // 
             this.btnEditParameters.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnEditParameters.ImageOptions.Image = ((System.Drawing.Image)(resources.GetObject("btnEditParameters.ImageOptions.Image")));
-            this.btnEditParameters.Location = new System.Drawing.Point(1343, 8);
+            this.btnEditParameters.Location = new System.Drawing.Point(1485, 8);
             this.btnEditParameters.Name = "btnEditParameters";
             this.btnEditParameters.Size = new System.Drawing.Size(136, 40);
             this.btnEditParameters.TabIndex = 0;
@@ -95,6 +96,7 @@
             this.gridViewStages.HiddenEditor += new System.EventHandler(this.gridViewStages_HiddenEditor);
             this.gridViewStages.ShownEditor += new System.EventHandler(this.gridViewStages_ShownEditor);
             this.gridViewStages.CellValueChanged += new DevExpress.XtraGrid.Views.Base.CellValueChangedEventHandler(this.gridViewStages_CellValueChanged);
+            this.gridViewStages.CellValueChanging += new DevExpress.XtraGrid.Views.Base.CellValueChangedEventHandler(this.gridViewStages_CellValueChanging);
             this.gridViewStages.CustomUnboundColumnData += new DevExpress.XtraGrid.Views.Base.CustomColumnDataEventHandler(this.GridViewStages_CustomUnboundColumnData);
             this.gridViewStages.ValidatingEditor += new DevExpress.XtraEditors.Controls.BaseContainerValidateEditorEventHandler(this.gridViewStages_ValidatingEditor);
             // 
@@ -140,7 +142,7 @@
             // 
             this.btnEditStages.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnEditStages.ImageOptions.Image = ((System.Drawing.Image)(resources.GetObject("btnEditStages.ImageOptions.Image")));
-            this.btnEditStages.Location = new System.Drawing.Point(1485, 8);
+            this.btnEditStages.Location = new System.Drawing.Point(1627, 8);
             this.btnEditStages.Name = "btnEditStages";
             this.btnEditStages.Size = new System.Drawing.Size(136, 40);
             this.btnEditStages.TabIndex = 0;
@@ -151,7 +153,7 @@
             // 
             this.btnEditRecipe.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnEditRecipe.ImageOptions.Image = ((System.Drawing.Image)(resources.GetObject("btnEditRecipe.ImageOptions.Image")));
-            this.btnEditRecipe.Location = new System.Drawing.Point(1627, 8);
+            this.btnEditRecipe.Location = new System.Drawing.Point(1769, 8);
             this.btnEditRecipe.Name = "btnEditRecipe";
             this.btnEditRecipe.Size = new System.Drawing.Size(136, 40);
             this.btnEditRecipe.TabIndex = 0;
@@ -161,7 +163,7 @@
             // btnRefreshRecipe
             // 
             this.btnRefreshRecipe.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("btnRefreshRecipe.ImageOptions.SvgImage")));
-            this.btnRefreshRecipe.Location = new System.Drawing.Point(1251, 8);
+            this.btnRefreshRecipe.Location = new System.Drawing.Point(1865, 8);
             this.btnRefreshRecipe.Name = "btnRefreshRecipe";
             this.btnRefreshRecipe.Size = new System.Drawing.Size(40, 40);
             this.btnRefreshRecipe.TabIndex = 0;
@@ -176,13 +178,15 @@
             new DevExpress.XtraEditors.Controls.EditorButton(DevExpress.XtraEditors.Controls.ButtonPredefines.Combo)});
             this.lookUpEditRecipe.Size = new System.Drawing.Size(278, 20);
             this.lookUpEditRecipe.TabIndex = 4;
+            this.lookUpEditRecipe.CustomDrawCell += new DevExpress.XtraEditors.Popup.LookUpCustomDrawCellEventHandler(this.lookUpEditRecipe_CustomDrawCell);
             this.lookUpEditRecipe.EditValueChanged += new System.EventHandler(this.lookUpEditRecipe_EditValueChanged);
+            this.lookUpEditRecipe.CustomDisplayText += new DevExpress.XtraEditors.Controls.CustomDisplayTextEventHandler(this.lookUpEditRecipe_CustomDisplayText);
             // 
             // btnDebug
             // 
             this.btnDebug.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnDebug.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("btnDebug.ImageOptions.SvgImage")));
-            this.btnDebug.Location = new System.Drawing.Point(1251, 8);
+            this.btnDebug.Location = new System.Drawing.Point(1865, 8);
             this.btnDebug.Name = "btnDebug";
             this.btnDebug.Size = new System.Drawing.Size(40, 40);
             this.btnDebug.TabIndex = 0;
@@ -206,7 +210,7 @@
             // checkBoxShowPLC
             // 
             this.checkBoxShowPLC.ImageOptions.Location = DevExpress.XtraEditors.ImageLocation.MiddleCenter;
-            this.checkBoxShowPLC.Location = new System.Drawing.Point(1205, 8);
+            this.checkBoxShowPLC.Location = new System.Drawing.Point(1439, 8);
             this.checkBoxShowPLC.Name = "checkBoxShowPLC";
             this.checkBoxShowPLC.Size = new System.Drawing.Size(40, 40);
             this.checkBoxShowPLC.TabIndex = 5;
@@ -216,7 +220,7 @@
             // 
             this.btnSaveAs.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnSaveAs.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("btnSaveAs.ImageOptions.SvgImage")));
-            this.btnSaveAs.Location = new System.Drawing.Point(1251, 8);
+            this.btnSaveAs.Location = new System.Drawing.Point(1865, 8);
             this.btnSaveAs.Name = "btnSaveAs";
             this.btnSaveAs.Size = new System.Drawing.Size(40, 40);
             this.btnSaveAs.TabIndex = 0;
@@ -235,13 +239,13 @@
             this.textEditRecipeName.Properties.Appearance.Options.UseForeColor = true;
             this.textEditRecipeName.Properties.Appearance.Options.UseTextOptions = true;
             this.textEditRecipeName.Properties.Appearance.TextOptions.HAlignment = DevExpress.Utils.HorzAlignment.Center;
-            this.textEditRecipeName.Size = new System.Drawing.Size(945, 40);
+            this.textEditRecipeName.Size = new System.Drawing.Size(1179, 40);
             this.textEditRecipeName.TabIndex = 6;
             // 
             // checkButtonBaseStage
             // 
             this.checkButtonBaseStage.ImageOptions.Location = DevExpress.XtraEditors.ImageLocation.MiddleCenter;
-            this.checkButtonBaseStage.Location = new System.Drawing.Point(1166, 8);
+            this.checkButtonBaseStage.Location = new System.Drawing.Point(1400, 8);
             this.checkButtonBaseStage.Name = "checkButtonBaseStage";
             this.checkButtonBaseStage.Size = new System.Drawing.Size(40, 40);
             this.checkButtonBaseStage.TabIndex = 7;
@@ -303,7 +307,6 @@
             this.Controls.Add(this.btnEditRecipe);
             this.Name = "RecipeUI";
             this.Size = new System.Drawing.Size(1921, 958);
-            this.Load += new System.EventHandler(this.RecipeUI_Load);
             this.VisibleChanged += new System.EventHandler(this.RecipeUI_VisibleChanged);
             ((System.ComponentModel.ISupportInitialize)(this.gridControlStages)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.gridViewStages)).EndInit();

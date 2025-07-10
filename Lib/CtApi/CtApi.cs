@@ -342,9 +342,10 @@ namespace TechRecipeAX
         /// <param name="hfindptr">Handle to the search, as returned by ctFindFirst().</param>
         /// <param name="propertyName">The name of the property to be retrieved.</param>
         /// <returns>The property value.</returns>
-        private string GetProperty(IntPtr hfindptr, string propertyName)
+        private string GetProperty(IntPtr hfindptr, string propertyName, bool isLogger = false)
         {
-            Logger.Trace($"Citect.CtApi > GetProperty, propertyName={propertyName}");
+            if (isLogger)
+                Logger.Trace($"Citect.CtApi > GetProperty, propertyName={propertyName}");
 
             var pData = new StringBuilder(100);
             var dwResultLength = UIntPtr.Zero;
@@ -357,7 +358,8 @@ namespace TechRecipeAX
             }
             else
             {
-                Logger.Trace($"Citect.CtApi > GetProperty, propertyName={propertyName}, propertyValue={pData}");
+                if (isLogger)
+                    Logger.Trace($"Citect.CtApi > GetProperty, propertyName={propertyName}, propertyValue={pData}");
                 return pData.ToString();
             }
         }
@@ -725,9 +727,9 @@ namespace TechRecipeAX
         /// <param name="tag">The tag name or tag name and element name, separated by a dot. If the element name is not specified, it will be resolved at runtime as for an unqualified tag reference. You may use the array syntax [] to select an element of an array.</param>
         /// <param name="value">The value to write to the tag as a string.</param>
         /// <exception cref="Win32Exception"></exception>
-        public Task TagWriteAsync(string tag, string value)
+        public Task TagWriteAsync(string tag, string value, bool isLogger = false)
         {
-            return Task.Run(() => TagWrite(tag, value));
+            return Task.Run(() => TagWrite(tag, value, isLogger));
         }
 
         /// <summary>
@@ -740,14 +742,16 @@ namespace TechRecipeAX
         {
             var strBuid = new StringBuilder(100);
             var result = CtCicode(_ctapi, $"TagWrite({tag}, {value})", 0, 0, strBuid, strBuid.Capacity, IntPtr.Zero);
+            //var result = CtTagWrite(_ctapi, tag, value);
 
             if (isLogger)
             {
 
                 if (result == 0)
+                //if (result == false)
                     Logger.Error($"Citect.CtApi > Cicode TagWrite, tag = {tag}, value = {value}, error = write with error");
                 else
-                    Logger.Debug($"Citect.CtApi > Cicode TagWrite, tag = {tag}, value = {value}");
+                    Logger.Info($"Citect.CtApi > Cicode TagWrite, tag = {tag}, value = {value}");
             }
         }
 

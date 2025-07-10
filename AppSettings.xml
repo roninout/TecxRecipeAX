@@ -17,5 +17,9 @@
   <RecipeStageT08Tag>S01_Recipe_T08_Stage</RecipeStageT08Tag>
   <RecipeStageT09Tag>S01_Recipe_T09_Stage</RecipeStageT09Tag>
   <RecipeStageT10Tag>S01_Recipe_T10_Stage</RecipeStageT10Tag>
-  
+
+  <!--Set tags for PLC-->
+  <ColumnParameterStageWidth>300</ColumnParameterStageWidth>
+  <ColumnParameterInputFieldWidth>71</ColumnParameterInputFieldWidth>
+  <ColumnParameterCheckBoxWidth>40</ColumnParameterCheckBoxWidth>
 </settings>

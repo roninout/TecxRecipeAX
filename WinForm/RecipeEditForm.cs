@@ -12,6 +12,8 @@ using DevExpress.XtraEditors.Controls;
 using DevExpress.XtraEditors.Repository;
 using DevExpress.XtraGrid.Views.Base;
 using DevExpress.XtraGrid.Columns;
+using DevExpress.XtraGrid.Views.Grid;
+using System.Drawing;
 
 namespace TecxRecipeAX
 {
@@ -25,12 +27,14 @@ namespace TecxRecipeAX
         private Recipe _globalSelectedRecipe;
         private bool _isEditingName = false;
         private int? _currentBaseRecipeId;
+        private int _currentRecipeId;
         private bool hideTagColumn = false;
         private int _recipeAccessIntProperty;
+        private string _pageName;
 
         public event EventHandler DataUpdated;
 
-        public RecipeEditForm(RecipeDbContext context, int? currentBaseRecipeId, Recipe globalSelectedRecipe, int RecipeAccessIntProperty)
+        public RecipeEditForm(RecipeDbContext context, int? currentBaseRecipeId, Recipe globalSelectedRecipe, int RecipeAccessIntProperty, string pageName, int currentRecipeId)
         {
             InitializeComponent();
             _context = context;
@@ -38,6 +42,9 @@ namespace TecxRecipeAX
             _currentBaseRecipeId = currentBaseRecipeId;
             _globalSelectedRecipe = globalSelectedRecipe;
             _recipeAccessIntProperty = RecipeAccessIntProperty;
+            _pageName = pageName;
+            this.Text += $" ({_pageName})";
+            _currentRecipeId = currentRecipeId;
         }
 
         #region Init
@@ -48,8 +55,8 @@ namespace TecxRecipeAX
             //await ValidateAllRecipeStagesParameters();
 
             // скрывать кнопку настроек
-            if (_recipeAccessIntProperty < 3)
-                layoutControlItem2.Visibility = DevExpress.XtraLayout.Utils.LayoutVisibility.Never;
+            //if (_recipeAccessIntProperty < 3)
+                //layoutControlItem2.Visibility = DevExpress.XtraLayout.Utils.LayoutVisibility.Never;
         }
         #endregion
 
@@ -67,7 +74,7 @@ namespace TecxRecipeAX
 
                 if (_context.RecipeParameters.Any(rp => rp.recipeStageId == stage.id))
                 {
-                    var confirm = MessageBox.Show("Все параметры будут заменены. Продолжить?", "Подтверждение", MessageBoxButtons.YesNo);
+                    var confirm = MessageBox.Show("Усі параметри буде замінено. Продовжити?", "Підтвердження", MessageBoxButtons.YesNo);
                     if (confirm != DialogResult.Yes)
                     {
                         gridViewStages.RefreshRow(e.RowHandle);
@@ -80,8 +87,53 @@ namespace TecxRecipeAX
                 stage.name = newBaseStage.name;
                 stage.description = GetRecipeStageTag();
 
-                UpdateRecipeStageParameters(stage, newBaseStage);
+                // -------------------------------------------------------------------
+                // Загружаем базовый рецепт по текущему baseRecipeId
+                var baseRecipe = _context.Recipes
+                    .Include(r => r.RecipeStages.Select(rs => rs.RecipeParameters))
+                    .FirstOrDefault(r => r.baseRecipeId == _currentBaseRecipeId);
+
+                // Удаляем старые параметры
+                var existingParams = _context.RecipeParameters.Where(p => p.recipeStageId == stage.id).ToList();
+                _context.RecipeParameters.RemoveRange(existingParams);
+
+                // Создаем новые параметры с инициализацией value из базового рецепта (или 0)
+                var newParams = newBaseStage.BaseParameters.Select(bp =>
+                {
+                    double valueToAssign = 0.0;
+
+                    if (baseRecipe != null)
+                    {
+                        var baseStageInRecipe = baseRecipe.RecipeStages
+                            .FirstOrDefault(rs => rs.baseRecipeStageId == newBaseStage.id);
+
+                        if (baseStageInRecipe != null)
+                        {
+                            var matchingParam = baseStageInRecipe.RecipeParameters
+                                .FirstOrDefault(p => p.baseParameterId == bp.id);
+
+                            if (matchingParam != null)
+                                valueToAssign = matchingParam.value;
+                        }
+                    }
+
+                    return new RecipeParameter
+                    {
+                        name = bp.name,                        
+                        description = bp.description,
+                        baseParameterId = bp.id,
+                        recipeStageId = stage.id,
+                        value = valueToAssign,
+                        active = true
+                    };
+                }).ToList();
+
+                _context.RecipeParameters.AddRange(newParams);
             }
+            // -------------------------------------------------------------------
+
+            //UpdateRecipeStageParameters(stage, newBaseStage);
+        //}
 
             _context.SaveChanges(); // ← сохраняем все изменения, включая Tag
 
@@ -123,40 +175,100 @@ namespace TecxRecipeAX
             gridViewStages.UpdateCurrentRow(); // Сохраняет изменения
         }
 
+        private void gridViewStages_RowStyle(object sender, DevExpress.XtraGrid.Views.Grid.RowStyleEventArgs e)
+        {
+            GridView view = sender as GridView;
+
+            if (e.RowHandle >= 0)
+            {
+                // Получаем значение stageNumb текущей строки
+                var stageDescriptionObj = view.GetRowCellValue(e.RowHandle, "description");
+
+                if (stageDescriptionObj != null)
+                {
+                    if (string.IsNullOrEmpty(stageDescriptionObj.ToString()))
+                    {
+                        e.Appearance.BackColor = Color.LightCoral;
+                        e.HighPriority = true; // обязательно, чтобы перекрыть другие стили
+                    }
+                }
+            }
+        }
+
         #endregion
 
         #region ComboBox
 
         private async Task LoadRecipesToCombobox()
         {
+            // Загружаем рецепты асинхронно и сортируем по имени
             recipes = await _context.Recipes
-                        .Where(r => r.baseRecipeId == _currentBaseRecipeId)
-                        .Include(r => r.RecipeStages)
-                        .ToListAsync();
+                .Where(r => r.baseRecipeId == _currentBaseRecipeId && r.name.Contains(_pageName))
+                .Include(r => r.RecipeStages)
+                .OrderBy(r => r.name)
+                .ToListAsync();
 
+            // Если нет рецептов, создаем дефолтный
             if (!recipes.Any())
             {
-                var defaultRecipe = new Recipe { name = "Default Recipe" };
+                var defaultRecipe = new Recipe { name = "Default Recipe", baseRecipeId = _currentBaseRecipeId };
                 _context.Recipes.Add(defaultRecipe);
-                _context.SaveChanges();
-                recipes = _context.Recipes.Include(r => r.RecipeStages).ToList();
+                await _context.SaveChangesAsync();
+                //recipes = _context.Recipes.Include(r => r.RecipeStages).OrderBy(r => r.name).ToList();
+                recipes = await _context.Recipes
+                    .Where(r => r.baseRecipeId == _currentBaseRecipeId)
+                    .Include(r => r.RecipeStages)
+                    .OrderBy(r => r.name)
+                    .ToListAsync();
             }
 
-            comboBoxRecipes.Properties.DataSource = recipes;
-            comboBoxRecipes.Properties.DisplayMember = "name";
-            comboBoxRecipes.Properties.ValueMember = "id";
-
-            // Удаляем все лишние колонки, оставляем только name
-            comboBoxRecipes.Properties.Columns.Clear();
-            comboBoxRecipes.Properties.Columns.Add(new LookUpColumnInfo("id", "Id"));
-            comboBoxRecipes.Properties.Columns.Add(new LookUpColumnInfo("name", "Recipe Name"));
-
-            // Устанавливаем 0-й элемент по умолчанию
-            if (recipes.Count > 0)
+            // Безопасно обновляем comboBoxRecipes
+            if (comboBoxRecipes.InvokeRequired)
             {
-                comboBoxRecipes.EditValue = null;
+                comboBoxRecipes.Invoke(new Action(() => UpdateComboBoxRecipes(recipes)));
+            }
+            else
+            {
+                UpdateComboBoxRecipes(recipes);
+            }
+        }
+
+        // вспомогательный метод инициализации комбобокса
+        private void UpdateComboBoxRecipes(List<Recipe> recipes)
+        {
+            comboBoxRecipes.Properties.BeginUpdate();
+            try
+            {
+                comboBoxRecipes.Properties.DataSource = recipes;
+                comboBoxRecipes.Properties.DisplayMember = "name";
+                comboBoxRecipes.Properties.ValueMember = "id";
+
+                comboBoxRecipes.Properties.Columns.Clear();
+                comboBoxRecipes.Properties.Columns.Add(new LookUpColumnInfo("id", "Id") { Width = 25 });
+                comboBoxRecipes.Properties.Columns.Add(new LookUpColumnInfo("name", "Recipe Name") { Width = 125 });
+            }
+            finally
+            {
+                comboBoxRecipes.Properties.EndUpdate();
+            }
+
+            // Устанавливаем выбранный рецепт и вызываем обработчик
+            if (recipes.Count > 0 && _globalSelectedRecipe != null)
+            {
+                comboBoxRecipes.EditValueChanged -= comboBoxRecipes_EditValueChanged;
                 comboBoxRecipes.EditValue = _globalSelectedRecipe.id;
+                comboBoxRecipes.EditValueChanged += comboBoxRecipes_EditValueChanged;
+
                 comboBoxRecipes_EditValueChanged(comboBoxRecipes, EventArgs.Empty);
+            }
+        }
+
+        // для кастомного отображения item в комбобоксе
+        private void comboBoxRecipes_CustomDisplayText(object sender, CustomDisplayTextEventArgs e)
+        {
+            if (comboBoxRecipes.GetSelectedDataRow() is Recipe recipe)
+            {
+                e.DisplayText = $"[{recipe.id}] {recipe.name}";
             }
         }
 
@@ -180,12 +292,25 @@ namespace TecxRecipeAX
             }
         }
 
+        private void comboBoxRecipes_CustomDrawCell(object sender, DevExpress.XtraEditors.Popup.LookUpCustomDrawCellArgs e)
+        {
+            if (e.Row == null || e.Column == null) return;
+
+            var recipe = e.Row as Recipe;
+            if (recipe == null) return;
+
+            if (selectedRecipe != null && selectedRecipe.id == recipe.id)
+                e.Appearance.Font = new Font(e.Appearance.Font, FontStyle.Bold);
+            if (selectedRecipe != null && _currentRecipeId == recipe.id)
+                e.Appearance.ForeColor = Color.Green;
+        }
+
         #endregion
 
         #region Buttons
 
         // Создать новый рецепт
-        private void btnAddRecipe_Click(object sender, EventArgs e)
+        private async void btnAddRecipe_Click(object sender, EventArgs e)
         {
             try
             {
@@ -200,26 +325,26 @@ namespace TecxRecipeAX
                 _context.SaveChanges();
 
                 // Обновляем комбобокс рецептов
-                LoadRecipesToCombobox();
+                await LoadRecipesToCombobox();
 
                 // Выбираем новый рецепт
                 comboBoxRecipes.EditValue = newRecipe.id;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при добавлении рецепта: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Помилка при додаванні рецепту: {ex.Message}", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         // Удалить рецепт
-        private void btnDeleteRecipe_Click(object sender, EventArgs e)
+        private async void btnDeleteRecipe_Click(object sender, EventArgs e)
         {
             if (selectedRecipe == null) return;
 
             // Запрашиваем подтверждение
             if (XtraMessageBox.Show(
-                $"Вы действительно хотите удалить рецепт \"{selectedRecipe.name}\" со всеми стадиями и параметрами?",
-                "Подтверждение удаления", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                $"Ви дійсно хочете видалити рецепт \"{selectedRecipe.name}\" з усіма стадіями та параметрами?",
+                "Підтвердження видалення", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
                 return;
 
             try
@@ -245,15 +370,15 @@ namespace TecxRecipeAX
                 //textBoxRecipeName.Text = "";
 
                 // Обновляем интерфейс
-                LoadRecipesToCombobox();
+                await LoadRecipesToCombobox();
                 SelectRecipe(selectedRecipe);
                 //dataGridViewStages.DataSource = null;
 
-                XtraMessageBox.Show("Рецепт удалён.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                XtraMessageBox.Show("Рецепт видалено.", "Успіх", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка удаления: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Помилка видалення: {ex.Message}", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -262,14 +387,14 @@ namespace TecxRecipeAX
         {
             if (selectedRecipe == null)
             {
-                XtraMessageBox.Show("Выберите рецепт.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                XtraMessageBox.Show("Виберіть рецепт.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             var baseStage = _context.BaseRecipeStages.Include(b => b.BaseParameters).OrderBy(b => b.name).FirstOrDefault();
             if (baseStage == null)
             {
-                XtraMessageBox.Show("Нет доступных базовых стадий.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                XtraMessageBox.Show("Немає доступних базових стадій.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -365,22 +490,51 @@ namespace TecxRecipeAX
 
             gridControlStages.RefreshDataSource();
 
-            MessageBox.Show("Параметры стадий обновлены из базовых стадий.", "Успешно", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("Параметри стадій оновлено з базових стадій.", "Успіх", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         // кнопка редактирования имени рецепта
-        private void btnToggleEditName_Click(object sender, EventArgs e)
+        private async void btnToggleEditName_Click(object sender, EventArgs e)
         {
-            _isEditingName = !_isEditingName;
-            comboBoxRecipes.Properties.TextEditStyle = _isEditingName ? TextEditStyles.Standard : TextEditStyles.DisableTextEditor;
-    //        btnToggleEditName.ImageOptions.SvgImage = _isEditingName
-    //? SvgImages.Actions.Lock // условно, иконка "lock"
-    //: SvgImages.Programming.Edit; // условно, иконка "edit"
+            if (selectedRecipe == null)
+            {
+                XtraMessageBox.Show("Спочатку виберіть рецепт.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
-            //comboBoxRecipes.Properties.ReadOnly = !_isEditingName;
+            using (var renameForm = new FormRecipeRename(selectedRecipe.name))
+            {
+                try
+                {
+                    if (renameForm.ShowDialog(this) == DialogResult.OK)
+                    {
+                        var newName = renameForm.NewRecipeName;
 
-            if (_isEditingName)
-                comboBoxRecipes.Focus();
+                        if (_context.Recipes.Any(r => r.name == newName && r.id != selectedRecipe.id))
+                        {
+                            XtraMessageBox.Show("Рецепт із таким ім'ям вже існує.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        selectedRecipe.name = newName;
+                        _context.SaveChanges();
+
+                        // Обновляем интерфейс
+                        selectedRecipe = null;
+                        await LoadRecipesToCombobox();
+                        SelectRecipe(selectedRecipe);
+
+                        //comboBoxRecipes.EditValue = selectedRecipe.id;
+
+                        XtraMessageBox.Show("Ім'я рецепта оновлено.", "Успіх", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+                catch (Exception ee)
+                {
+                    MessageBox.Show(ee.Message);
+                    //throw;
+                }
+            }
         }
 
         // обработчик события нажатия кнопки для копирования рецепта
@@ -402,7 +556,7 @@ namespace TecxRecipeAX
         {
             if (selectedRecipe == null)
             {
-                XtraMessageBox.Show("Выберите рецепт для копирования.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                XtraMessageBox.Show("Виберіть рецепт для копіювання.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -465,11 +619,11 @@ namespace TecxRecipeAX
                 LoadRecipesToCombobox();
                 comboBoxRecipes.EditValue = newRecipe.id;
 
-                XtraMessageBox.Show($"Рецепт \"{baseName}\" успешно скопирован как \"{newName}\".", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                XtraMessageBox.Show($"Рецепт \"{baseName}\" успішно скопійовано як \"{newName}\".", "Успіх", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при копировании рецепта: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Помилка при копіюванні рецепту: {ex.Message}", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -479,8 +633,17 @@ namespace TecxRecipeAX
 
         private void RecipeEditForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (gridControlStages != null)
+            {
+                gridControlStages.Visible = false; // предотвратит перерисовку
+                gridControlStages.Parent = null;   // удалит из иерархии
+                gridControlStages.DataSource = null;
+                gridControlStages.MainView = null; // убирает GridView
+                gridControlStages.Dispose();
+            }
+
             //_context.Dispose();
-            DataUpdated?.Invoke(this, EventArgs.Empty);
+            //DataUpdated?.Invoke(this, EventArgs.Empty);
         }
         #endregion
 
@@ -497,7 +660,11 @@ namespace TecxRecipeAX
 
             var sortedStages = selectedRecipe.RecipeStages.OrderBy(s => s.stageNumb).ToList();
             recipeStageBindingList = new BindingList<RecipeStage>(sortedStages);
+
+            gridControlStages.BeginUpdate();
+            gridControlStages.DataSource = null;
             gridControlStages.DataSource = recipeStageBindingList;
+            gridControlStages.EndUpdate();
 
             UpdateButtonsState();
         }
@@ -511,9 +678,9 @@ namespace TecxRecipeAX
                 DataSource = baseRecipeStages,
                 DisplayMember = "name",
                 ValueMember = "id",
-                NullText = "[Выберите стадию]"
+                NullText = "[Виберіть стадію]"
             };
-            stageLookup.Columns.Add(new LookUpColumnInfo("name", "Стадия"));
+            stageLookup.Columns.Add(new LookUpColumnInfo("name", "Стадія"));
 
             // Подписка на события
             stageLookup.EditValueChanged += StageLookup_EditValueChanged;
@@ -572,7 +739,7 @@ namespace TecxRecipeAX
             var stage = gridViewStages.GetRow(rowHandle) as RecipeStage;
             if (stage == null) return;
 
-            if (XtraMessageBox.Show($"Удалить стадию '{stage.name}' и её параметры?", "Удаление стадии",
+            if (XtraMessageBox.Show($"Видалити стадію '{stage.name}' та її параметри?", "Видалення стадії",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
 
@@ -601,13 +768,13 @@ namespace TecxRecipeAX
             var newName = comboBoxRecipes.Text.Trim(); // Берем текст из LookUpEdit
             if (string.IsNullOrWhiteSpace(newName))
             {
-                XtraMessageBox.Show("Имя рецепта не может быть пустым.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                XtraMessageBox.Show("Ім'я рецепту не може бути порожнім.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if (_context.Recipes.Any(r => r.name == newName && r.id != selectedRecipe.id))
             {
-                XtraMessageBox.Show("Рецепт с таким именем уже существует.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                XtraMessageBox.Show("Рецепт із таким ім'ям вже існує.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -617,7 +784,7 @@ namespace TecxRecipeAX
             LoadRecipesToCombobox();
             comboBoxRecipes.EditValue = selectedRecipe.id;
 
-            XtraMessageBox.Show("Имя рецепта обновлено.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            XtraMessageBox.Show("Ім'я рецепту оновлено.", "Успіх", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             _isEditingName = false;
             comboBoxRecipes.Properties.TextEditStyle = TextEditStyles.DisableTextEditor;
@@ -636,10 +803,11 @@ namespace TecxRecipeAX
             }
             else
             {
-                var recipeStage = _context.RecipePages.FirstOrDefault(r => r.recipeId == _globalSelectedRecipe.id);
-                if (recipeStage != null)
+                //var recipeStage = _context.RecipePages.FirstOrDefault(r => r.recipeId == _globalSelectedRecipe.id);
+                //if (recipeStage != null)
+                if (!string.IsNullOrEmpty(_pageName))
                 {
-                    switch (recipeStage.page)
+                    switch (_pageName)
                     {
                         case "R01":
                             return ConfigHelper.RecipeStageR01Tag;
@@ -653,7 +821,7 @@ namespace TecxRecipeAX
                 }
             }
 
-            return "Place a tag in this field";
+            return string.Empty;
         }
 
         #endregion

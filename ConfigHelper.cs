@@ -42,8 +42,8 @@ namespace TecxRecipeAX
         {
             var settings = LoadSettings();
             var element = settings.Element(name);
-            if (element == null || string.IsNullOrWhiteSpace(element.Value))
-                throw new InvalidOperationException($"Параметр '{name}' не найден или пуст в AppSettings.xml");
+            //if (element == null || string.IsNullOrWhiteSpace(element.Value))
+            //    throw new InvalidOperationException($"Параметр '{name}' не найден или пуст в AppSettings.xml");
 
             return element.Value.Trim();
         }
@@ -67,6 +67,10 @@ namespace TecxRecipeAX
         public static string RecipeStageT09Tag => GetSetting("RecipeStageT09Tag");
         public static string RecipeStageT10Tag => GetSetting("RecipeStageT10Tag");
 
+        // Table config
+        public static string ColumnParameterStageWidth => GetSetting("ColumnParameterStageWidth");
+        public static string ColumnParameterInputFieldWidth => GetSetting("ColumnParameterInputFieldWidth");
+        public static string ColumnParameterCheckBoxWidth => GetSetting("ColumnParameterCheckBoxWidth");
     }
 
 

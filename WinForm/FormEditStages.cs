@@ -47,14 +47,57 @@ namespace TecxRecipeAX
 
         private async Task LoadDataAsync()
         {
+            //try
+            //{
+            //    _baseParametersList = await _context.BaseParameters.ToListAsync();
+            //    var stages = await _context.BaseRecipeStages.Include(s => s.BaseParameters).ToListAsync();
+
+            //    _bindingList = new BindingList<StageGridItem>(stages.Select(s => ConvertToGridItem(s)).ToList());
+            //    _bindingList.ListChanged += BindingList_ListChanged; // вызывается при добавлении новой стадии
+
+            //    gridControlStages.BeginUpdate();
+            //    gridControlStages.DataSource = null;
+            //    gridControlStages.DataSource = _bindingList;
+            //    gridControlStages.EndUpdate();
+            //}
+            //catch (Exception ex)
+            //{
+            //    XtraMessageBox.Show($"Ошибка загрузки: {ex.Message}");
+            //}
+
             try
             {
-                _baseParametersList = await _context.BaseParameters.ToListAsync();
+                var baseParameters = await _context.BaseParameters.ToListAsync();
                 var stages = await _context.BaseRecipeStages.Include(s => s.BaseParameters).ToListAsync();
 
-                _bindingList = new BindingList<StageGridItem>(stages.Select(s => ConvertToGridItem(s)).ToList());
-                _bindingList.ListChanged += BindingList_ListChanged; // вызывается при добавлении новой стадии
-                gridControlStages.DataSource = _bindingList;
+                var bindingList = new BindingList<StageGridItem>(stages.Select(s => ConvertToGridItem(s)).ToList());
+
+                // Присвоение и установка DataSource строго в UI потоке:
+                if (InvokeRequired)
+                {
+                    Invoke(new Action(() =>
+                    {
+                        _baseParametersList = baseParameters;
+                        _bindingList = bindingList;
+                        _bindingList.ListChanged += BindingList_ListChanged;
+
+                        gridControlStages.BeginUpdate();
+                        gridControlStages.DataSource = null;
+                        gridControlStages.DataSource = _bindingList;
+                        gridControlStages.EndUpdate();
+                    }));
+                }
+                else
+                {
+                    _baseParametersList = baseParameters;
+                    _bindingList = bindingList;
+                    _bindingList.ListChanged += BindingList_ListChanged;
+
+                    gridControlStages.BeginUpdate();
+                    gridControlStages.DataSource = null;
+                    gridControlStages.DataSource = _bindingList;
+                    gridControlStages.EndUpdate();
+                }
             }
             catch (Exception ex)
             {
@@ -68,6 +111,7 @@ namespace TecxRecipeAX
         // настройка таблицы с колонками параметров
         private void ConfigureGridView()
         {
+            gridViewStages.BeginUpdate();
             gridViewStages.OptionsBehavior.Editable = true;
             gridViewStages.OptionsView.NewItemRowPosition = NewItemRowPosition.None;
             gridViewStages.OptionsView.ShowGroupPanel = false;
@@ -101,6 +145,7 @@ namespace TecxRecipeAX
 
             // Сортировка по имени
             gridViewStages.SortInfo.Add(new GridColumnSortInfo(gridViewStages.Columns["name"], DevExpress.Data.ColumnSortOrder.Ascending));
+            gridViewStages.EndUpdate();
             gridViewStages.BestFitColumns();
         }
 
@@ -239,19 +284,27 @@ namespace TecxRecipeAX
             }));
 
             var lookUpEdit = (lookUpEditBaseRecipeIdForParameters as LookUpEdit);
-            lookUpEdit.Properties.DataSource = dataSource;
-            lookUpEdit.Properties.DisplayMember = "name";
-            lookUpEdit.Properties.ValueMember = "id";
-            lookUpEdit.Properties.NullText = "All";
+            lookUpEdit.Properties.BeginUpdate();
+            try
+            {
+                lookUpEdit.Properties.DataSource = null;
+                lookUpEdit.Properties.DataSource = dataSource;
+                lookUpEdit.Properties.DisplayMember = "name";
+                lookUpEdit.Properties.ValueMember = "id";
+                lookUpEdit.Properties.NullText = "All";
 
-            lookUpEdit.Properties.PopulateColumns();
-            lookUpEdit.Properties.Columns["id"].Caption = "ID";
-            lookUpEdit.Properties.Columns["id"].Visible = true;
-            lookUpEdit.Properties.Columns["id"].Width = 50;
-            lookUpEdit.Properties.Columns["name"].Caption = "Recipe Name";
-            lookUpEdit.Properties.Columns["name"].Visible = true;
-
-            lookUpEditBaseRecipeIdForParameters.EditValue = _currentBaseRecipeId;
+                lookUpEdit.Properties.PopulateColumns();
+                lookUpEdit.Properties.Columns["id"].Caption = "ID";
+                lookUpEdit.Properties.Columns["id"].Visible = true;
+                lookUpEdit.Properties.Columns["id"].Width = 50;
+                lookUpEdit.Properties.Columns["name"].Caption = "Recipe Name";
+                lookUpEdit.Properties.Columns["name"].Visible = true;
+                lookUpEdit.EditValue = _currentBaseRecipeId;
+            }
+            finally
+            {
+                lookUpEdit.Properties.EndUpdate();
+            }
         }
 
         // событие комбобокса
@@ -260,6 +313,8 @@ namespace TecxRecipeAX
             currentBaseRecipeIdFilter = lookUpEditBaseRecipeIdForParameters.EditValue as int?;
 
             //var selectedId = (lookUpEditBaseRecipeIdForParameters as LookUpEdit)?.EditValue as int?;
+            gridControlStages.BeginUpdate();
+            gridControlStages.DataSource = null;
             if (currentBaseRecipeIdFilter == null)
             {
                 gridControlStages.DataSource = new BindingList<StageGridItem>(_bindingList);
@@ -269,7 +324,8 @@ namespace TecxRecipeAX
                 var filtered = _bindingList.Where(s => s.baseRecipeId == currentBaseRecipeIdFilter).OrderBy(s => s.id).ToList();
                 gridControlStages.DataSource = new BindingList<StageGridItem>(filtered);
             }
-            gridViewStages.RefreshData(); // Обновить отображение
+            //gridViewStages.RefreshData(); // Обновить отображение
+            gridControlStages.EndUpdate();            
         }
         #endregion
 
@@ -511,6 +567,22 @@ namespace TecxRecipeAX
                         }
                     }
                 };
+            }
+        }
+
+        #endregion
+
+        #region Form
+
+        private void FormEditStages_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (gridControlStages != null)
+            {
+                gridControlStages.Visible = false; // предотвратит перерисовку
+                gridControlStages.Parent = null;   // удалит из иерархии
+                gridControlStages.DataSource = null;
+                gridControlStages.MainView = null; // убирает GridView
+                gridControlStages.Dispose();
             }
         }
 

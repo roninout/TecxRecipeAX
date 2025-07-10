@@ -104,6 +104,7 @@
             this.gridViewStages.GridControl = this.gridControlStages;
             this.gridViewStages.Name = "gridViewStages";
             this.gridViewStages.OptionsView.ShowGroupPanel = false;
+            this.gridViewStages.RowStyle += new DevExpress.XtraGrid.Views.Grid.RowStyleEventHandler(this.gridViewStages_RowStyle);
             this.gridViewStages.FocusedRowChanged += new DevExpress.XtraGrid.Views.Base.FocusedRowChangedEventHandler(this.GridViewStages_FocusedRowChanged);
             this.gridViewStages.CellValueChanged += new DevExpress.XtraGrid.Views.Base.CellValueChangedEventHandler(this.GridViewStages_CellValueChanged);
             this.gridViewStages.RowUpdated += new DevExpress.XtraGrid.Views.Base.RowObjectEventHandler(this.gridViewStages_RowUpdated);
@@ -216,10 +217,12 @@
             this.comboBoxRecipes.Name = "comboBoxRecipes";
             this.comboBoxRecipes.Properties.Buttons.AddRange(new DevExpress.XtraEditors.Controls.EditorButton[] {
             new DevExpress.XtraEditors.Controls.EditorButton(DevExpress.XtraEditors.Controls.ButtonPredefines.Combo)});
-            this.comboBoxRecipes.Size = new System.Drawing.Size(234, 20);
+            this.comboBoxRecipes.Size = new System.Drawing.Size(326, 20);
             this.comboBoxRecipes.StyleController = this.RecipeEditFormlayoutControl1ConvertedLayout;
             this.comboBoxRecipes.TabIndex = 10;
+            this.comboBoxRecipes.CustomDrawCell += new DevExpress.XtraEditors.Popup.LookUpCustomDrawCellEventHandler(this.comboBoxRecipes_CustomDrawCell);
             this.comboBoxRecipes.EditValueChanged += new System.EventHandler(this.comboBoxRecipes_EditValueChanged);
+            this.comboBoxRecipes.CustomDisplayText += new DevExpress.XtraEditors.Controls.CustomDisplayTextEventHandler(this.comboBoxRecipes_CustomDisplayText);
             this.comboBoxRecipes.KeyDown += new System.Windows.Forms.KeyEventHandler(this.comboBoxRecipes_KeyDown);
             // 
             // btnDown
@@ -251,7 +254,7 @@
             this.btnDeleteRecipe.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnDeleteRecipe.ImageOptions.Location = DevExpress.XtraEditors.ImageLocation.MiddleCenter;
             this.btnDeleteRecipe.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("btnDeleteRecipe.ImageOptions.SvgImage")));
-            this.btnDeleteRecipe.Location = new System.Drawing.Point(376, 12);
+            this.btnDeleteRecipe.Location = new System.Drawing.Point(468, 12);
             this.btnDeleteRecipe.Name = "btnDeleteRecipe";
             this.btnDeleteRecipe.Size = new System.Drawing.Size(38, 36);
             this.btnDeleteRecipe.StyleController = this.RecipeEditFormlayoutControl1ConvertedLayout;
@@ -264,7 +267,7 @@
             this.btnAddRecipe.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnAddRecipe.ImageOptions.Location = DevExpress.XtraEditors.ImageLocation.MiddleCenter;
             this.btnAddRecipe.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("btnAddRecipe.ImageOptions.SvgImage")));
-            this.btnAddRecipe.Location = new System.Drawing.Point(334, 12);
+            this.btnAddRecipe.Location = new System.Drawing.Point(426, 12);
             this.btnAddRecipe.Name = "btnAddRecipe";
             this.btnAddRecipe.Size = new System.Drawing.Size(38, 36);
             this.btnAddRecipe.StyleController = this.RecipeEditFormlayoutControl1ConvertedLayout;
@@ -288,7 +291,7 @@
             // 
             this.btnSyncWithBaseStages.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnSyncWithBaseStages.ImageOptions.SvgImage = ((DevExpress.Utils.Svg.SvgImage)(resources.GetObject("btnSyncWithBaseStages.ImageOptions.SvgImage")));
-            this.btnSyncWithBaseStages.Location = new System.Drawing.Point(418, 12);
+            this.btnSyncWithBaseStages.Location = new System.Drawing.Point(510, 12);
             this.btnSyncWithBaseStages.Name = "btnSyncWithBaseStages";
             this.btnSyncWithBaseStages.Size = new System.Drawing.Size(38, 36);
             this.btnSyncWithBaseStages.StyleController = this.RecipeEditFormlayoutControl1ConvertedLayout;
@@ -346,7 +349,7 @@
             this.comboBoxRecipesitem.Control = this.comboBoxRecipes;
             this.comboBoxRecipesitem.Location = new System.Drawing.Point(84, 0);
             this.comboBoxRecipesitem.Name = "comboBoxRecipesitem";
-            this.comboBoxRecipesitem.Size = new System.Drawing.Size(238, 40);
+            this.comboBoxRecipesitem.Size = new System.Drawing.Size(330, 40);
             this.comboBoxRecipesitem.TextSize = new System.Drawing.Size(0, 0);
             this.comboBoxRecipesitem.TextVisible = false;
             // 
@@ -377,7 +380,7 @@
             // btnDeleteRecipeitem
             // 
             this.btnDeleteRecipeitem.Control = this.btnDeleteRecipe;
-            this.btnDeleteRecipeitem.Location = new System.Drawing.Point(364, 0);
+            this.btnDeleteRecipeitem.Location = new System.Drawing.Point(456, 0);
             this.btnDeleteRecipeitem.MaxSize = new System.Drawing.Size(42, 40);
             this.btnDeleteRecipeitem.MinSize = new System.Drawing.Size(42, 40);
             this.btnDeleteRecipeitem.Name = "btnDeleteRecipeitem";
@@ -389,7 +392,7 @@
             // btnAddRecipeitem
             // 
             this.btnAddRecipeitem.Control = this.btnAddRecipe;
-            this.btnAddRecipeitem.Location = new System.Drawing.Point(322, 0);
+            this.btnAddRecipeitem.Location = new System.Drawing.Point(414, 0);
             this.btnAddRecipeitem.MaxSize = new System.Drawing.Size(42, 40);
             this.btnAddRecipeitem.MinSize = new System.Drawing.Size(42, 40);
             this.btnAddRecipeitem.Name = "btnAddRecipeitem";
@@ -413,7 +416,7 @@
             // btnSyncWithBaseStagesitem
             // 
             this.btnSyncWithBaseStagesitem.Control = this.btnSyncWithBaseStages;
-            this.btnSyncWithBaseStagesitem.Location = new System.Drawing.Point(406, 0);
+            this.btnSyncWithBaseStagesitem.Location = new System.Drawing.Point(498, 0);
             this.btnSyncWithBaseStagesitem.MaxSize = new System.Drawing.Size(42, 40);
             this.btnSyncWithBaseStagesitem.MinSize = new System.Drawing.Size(42, 40);
             this.btnSyncWithBaseStagesitem.Name = "btnSyncWithBaseStagesitem";
@@ -446,9 +449,9 @@
             // emptySpaceItem1
             // 
             this.emptySpaceItem1.AllowHotTrack = false;
-            this.emptySpaceItem1.Location = new System.Drawing.Point(448, 0);
+            this.emptySpaceItem1.Location = new System.Drawing.Point(540, 0);
             this.emptySpaceItem1.Name = "emptySpaceItem1";
-            this.emptySpaceItem1.Size = new System.Drawing.Size(174, 40);
+            this.emptySpaceItem1.Size = new System.Drawing.Size(82, 40);
             this.emptySpaceItem1.TextSize = new System.Drawing.Size(0, 0);
             // 
             // layoutControlItem2
@@ -482,6 +485,7 @@
             this.MinimizeBox = false;
             this.Name = "RecipeEditForm";
             this.Text = "Edit recipe";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.RecipeEditForm_FormClosing);
             ((System.ComponentModel.ISupportInitialize)(this.gridControlStages)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.gridViewStages)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.RecipeEditFormlayoutControl1ConvertedLayout)).EndInit();

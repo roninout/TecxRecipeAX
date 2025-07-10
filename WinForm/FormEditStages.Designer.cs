@@ -295,6 +295,7 @@
             this.MinimizeBox = false;
             this.Name = "FormEditStages";
             this.Text = "Edit base stages";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FormEditStages_FormClosing);
             ((System.ComponentModel.ISupportInitialize)(this.gridControlStages)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.gridViewStages)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.FormEditStageslayoutControl1ConvertedLayout)).EndInit();

@@ -118,6 +118,7 @@
   <ItemGroup>
     <Compile Include="AX\ITechRecipeAXEvents.cs" />
     <Compile Include="AX\ITechRecipeAX.cs" />
+    <Compile Include="ControlExtensions.cs" />
     <Compile Include="DBConnect\RecipePage.cs" />
     <Compile Include="Enum\ParamFormat.cs" />
     <Compile Include="Enum\ParamKind.cs" />
@@ -146,6 +147,7 @@
     <Compile Include="RecipeUI.Designer.cs">
       <DependentUpon>RecipeUI.cs</DependentUpon>
     </Compile>
+    <Compile Include="ToolStripItemExtensions.cs" />
     <Compile Include="WinForm\FormDebug.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -170,6 +172,12 @@
     <Compile Include="WinForm\FormRecipeCopy.Designer.cs">
       <DependentUpon>FormRecipeCopy.cs</DependentUpon>
     </Compile>
+    <Compile Include="WinForm\FormRecipeRename.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="WinForm\FormRecipeRename.Designer.cs">
+      <DependentUpon>FormRecipeRename.cs</DependentUpon>
+    </Compile>
     <Compile Include="WinForm\RecipeEditForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -185,6 +193,7 @@
     <Content Include="AppSettings.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <None Include="Resources\editnames.svg" />
     <None Include="Resources\viewsettings.svg" />
     <None Include="Resources\pivottableoptions.svg" />
     <None Include="Resources\hidedetail.svg" />
@@ -221,6 +230,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="WinForm\FormRecipeCopy.resx">
       <DependentUpon>FormRecipeCopy.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="WinForm\FormRecipeRename.resx">
+      <DependentUpon>FormRecipeRename.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="WinForm\RecipeEditForm.resx">
       <DependentUpon>RecipeEditForm.cs</DependentUpon>

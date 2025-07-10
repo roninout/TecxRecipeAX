@@ -8,6 +8,8 @@ namespace TechRecipeAX
     [Guid("D2011371-CF5B-4CB0-BB05-FC4C3D4D0C30")]
     public interface ITechRecipeAX
     {
+        #region Properties
+
         [DispId(1)]
         string PageNameStrProperty { get; set; }
 
@@ -19,5 +21,13 @@ namespace TechRecipeAX
 
         [DispId(4)]
         bool RecipeModeIntProperty { get; set; }
+
+        #endregion
+
+        #region Methods
+
+        [DispId(5)]
+        void CloseActiveX();
+        #endregion
     }
 }

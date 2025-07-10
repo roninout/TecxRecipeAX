@@ -56,8 +56,12 @@ namespace TecxRecipeAX
                 var parameters = await _context.BaseParameters.ToListAsync();
 
                 _bindingList = new BindingList<BaseParameter>(parameters);
+                gridControlParameters.BeginUpdate();
+                gridControlParameters.DataSource = null;
                 gridControlParameters.DataSource = _bindingList;
+                gridControlParameters.EndUpdate();
 
+                gridViewParameters.BeginUpdate();
                 gridViewParameters.OptionsBehavior.Editable = true;
                 gridViewParameters.OptionsView.NewItemRowPosition = NewItemRowPosition.None;
                 gridViewParameters.OptionsView.ShowGroupPanel = false;
@@ -87,7 +91,8 @@ namespace TecxRecipeAX
                 //colType.Summary.Add(DevExpress.Data.SummaryItemType.Count, "description", "Total items: {0}");
 
                 LoadUsedParameterIds();
-                gridViewParameters.RefreshData();
+                gridViewParameters.EndUpdate();
+                //gridViewParameters.RefreshData();
             }
             catch (Exception ex)
             {
@@ -371,19 +376,28 @@ namespace TecxRecipeAX
             }));
 
             var lookUpEdit = (lookUpEditBaseRecipeId.Control as LookUpEdit);
-            lookUpEdit.Properties.DataSource = dataSource;
-            lookUpEdit.Properties.DisplayMember = "name";
-            lookUpEdit.Properties.ValueMember = "id";
-            lookUpEdit.Properties.NullText = "All";
+            lookUpEdit.Properties.BeginUpdate();
+            try
+            {
+                lookUpEdit.Properties.DataSource = null;
+                lookUpEdit.Properties.DataSource = dataSource;
+                lookUpEdit.Properties.DisplayMember = "name";
+                lookUpEdit.Properties.ValueMember = "id";
+                lookUpEdit.Properties.NullText = "All";
 
-            lookUpEdit.Properties.PopulateColumns();
-            lookUpEdit.Properties.Columns["id"].Caption = "ID";
-            lookUpEdit.Properties.Columns["id"].Visible = true;
-            lookUpEdit.Properties.Columns["id"].Width = 50;
-            lookUpEdit.Properties.Columns["name"].Caption = "Recipe Name";
-            lookUpEdit.Properties.Columns["name"].Visible = true;
+                lookUpEdit.Properties.PopulateColumns();
+                lookUpEdit.Properties.Columns["id"].Caption = "ID";
+                lookUpEdit.Properties.Columns["id"].Visible = true;
+                lookUpEdit.Properties.Columns["id"].Width = 50;
+                lookUpEdit.Properties.Columns["name"].Caption = "Recipe Name";
+                lookUpEdit.Properties.Columns["name"].Visible = true;
 
-            comboBoxEdit1.EditValue = _currentBaseRecipeId;
+                lookUpEdit.EditValue = _currentBaseRecipeId;
+            }
+            finally
+            {
+                lookUpEdit.Properties.EndUpdate();
+            }
         }
 
         // события ComboBox
@@ -393,6 +407,8 @@ namespace TecxRecipeAX
             _selectedBaseRecipeId = (lookUpEditBaseRecipeId.Control as LookUpEdit).EditValue as int?;
 
             // Если "All" — отображаем все параметры
+            gridControlParameters.BeginUpdate();
+            gridControlParameters.DataSource = null;
             if (_selectedBaseRecipeId == null)
             {
                 gridControlParameters.DataSource = _bindingList;
@@ -403,8 +419,8 @@ namespace TecxRecipeAX
                 var filtered = _bindingList.Where(p => p.baseRecipeId == _selectedBaseRecipeId).ToList();
                 gridControlParameters.DataSource = new BindingList<BaseParameter>(filtered);
             }
-
             gridViewParameters.RefreshData();
+            gridControlParameters.EndUpdate();
         }
         #endregion
     }
