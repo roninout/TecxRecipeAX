@@ -279,6 +279,7 @@
             this.MinimizeBox = false;
             this.Name = "FormEditParameters";
             this.Text = "Edit base parameters";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FormEditParameters_FormClosing);
             ((System.ComponentModel.ISupportInitialize)(this.gridControlParameters)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.gridViewParameters)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.FormEditParameterslayoutControl1ConvertedLayout)).EndInit();

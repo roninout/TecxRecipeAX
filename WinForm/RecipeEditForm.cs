@@ -64,80 +64,94 @@ namespace TecxRecipeAX
 
         private void GridViewStages_CellValueChanged(object sender, CellValueChangedEventArgs e)
         {
-            var stage = gridViewStages.GetRow(e.RowHandle) as RecipeStage;
-            if (stage == null) return;
+            // запустить асинхронно, не блокируя UI
+            _ = GridViewStages_CellValueChangedAsync(e);
+        }
 
-            if (e.Column.FieldName == nameof(RecipeStage.baseRecipeStageId))
+        private async Task GridViewStages_CellValueChangedAsync(CellValueChangedEventArgs e)
+        {
+            try
             {
-                var newBaseStage = baseRecipeStages.FirstOrDefault(bs => bs.id == (int)e.Value);
-                if (newBaseStage == null) return;
+                var stage = gridViewStages.GetRow(e.RowHandle) as RecipeStage;
+                if (stage == null) return;
 
-                if (_context.RecipeParameters.Any(rp => rp.recipeStageId == stage.id))
+                gridControlStages.BeginUpdate();
+
+                if (e.Column.FieldName == nameof(RecipeStage.baseRecipeStageId))
                 {
-                    var confirm = MessageBox.Show("Усі параметри буде замінено. Продовжити?", "Підтвердження", MessageBoxButtons.YesNo);
-                    if (confirm != DialogResult.Yes)
+                    var newBaseStage = baseRecipeStages.FirstOrDefault(bs => bs.id == (int)e.Value);
+                    if (newBaseStage == null) return;
+
+                    if (_context.RecipeParameters.Any(rp => rp.recipeStageId == stage.id))
                     {
-                        gridViewStages.RefreshRow(e.RowHandle);
-                        return;
-                    }
-                }
-
-                stage.baseRecipeStageId = newBaseStage.id;
-                stage.baseRecipeStage = newBaseStage;
-                stage.name = newBaseStage.name;
-                stage.description = GetRecipeStageTag();
-
-                // -------------------------------------------------------------------
-                // Загружаем базовый рецепт по текущему baseRecipeId
-                var baseRecipe = _context.Recipes
-                    .Include(r => r.RecipeStages.Select(rs => rs.RecipeParameters))
-                    .FirstOrDefault(r => r.baseRecipeId == _currentBaseRecipeId);
-
-                // Удаляем старые параметры
-                var existingParams = _context.RecipeParameters.Where(p => p.recipeStageId == stage.id).ToList();
-                _context.RecipeParameters.RemoveRange(existingParams);
-
-                // Создаем новые параметры с инициализацией value из базового рецепта (или 0)
-                var newParams = newBaseStage.BaseParameters.Select(bp =>
-                {
-                    double valueToAssign = 0.0;
-
-                    if (baseRecipe != null)
-                    {
-                        var baseStageInRecipe = baseRecipe.RecipeStages
-                            .FirstOrDefault(rs => rs.baseRecipeStageId == newBaseStage.id);
-
-                        if (baseStageInRecipe != null)
+                        var confirm = MessageBox.Show("Усі параметри буде замінено. Продовжити?", "Підтвердження", MessageBoxButtons.YesNo);
+                        if (confirm != DialogResult.Yes)
                         {
-                            var matchingParam = baseStageInRecipe.RecipeParameters
-                                .FirstOrDefault(p => p.baseParameterId == bp.id);
-
-                            if (matchingParam != null)
-                                valueToAssign = matchingParam.value;
+                            gridViewStages.RefreshRow(e.RowHandle);
+                            return;
                         }
                     }
 
-                    return new RecipeParameter
+                    stage.baseRecipeStageId = newBaseStage.id;
+                    stage.baseRecipeStage = newBaseStage;
+                    stage.name = newBaseStage.name;
+                    stage.description = GetRecipeStageTag();
+
+                    // -------------------------------------------------------------------
+                    // Загружаем базовый рецепт по текущему baseRecipeId
+                    var baseRecipe = await _context.Recipes
+                        .Include(r => r.RecipeStages.Select(rs => rs.RecipeParameters))
+                        .FirstOrDefaultAsync(r => r.baseRecipeId == _currentBaseRecipeId);
+
+                    // Удаляем старые параметры
+                    var existingParams = _context.RecipeParameters.Where(p => p.recipeStageId == stage.id).ToList();
+                    _context.RecipeParameters.RemoveRange(existingParams);
+
+                    // Создаем новые параметры с инициализацией value из базового рецепта (или 0)
+                    var newParams = newBaseStage.BaseParameters.Select(bp =>
                     {
-                        name = bp.name,                        
-                        description = bp.description,
-                        baseParameterId = bp.id,
-                        recipeStageId = stage.id,
-                        value = valueToAssign,
-                        active = true
-                    };
-                }).ToList();
+                        double valueToAssign = 0.0;
 
-                _context.RecipeParameters.AddRange(newParams);
+                        if (baseRecipe != null)
+                        {
+                            var baseStageInRecipe = baseRecipe.RecipeStages.FirstOrDefault(rs => rs.baseRecipeStageId == newBaseStage.id);
+
+                            if (baseStageInRecipe != null)
+                            {
+                                var matchingParam = baseStageInRecipe.RecipeParameters.FirstOrDefault(p => p.baseParameterId == bp.id);
+
+                                if (matchingParam != null)
+                                    valueToAssign = matchingParam.value;
+                            }
+                        }
+
+                        return new RecipeParameter
+                        {
+                            name = bp.name,
+                            description = bp.description,
+                            baseParameterId = bp.id,
+                            recipeStageId = stage.id,
+                            value = valueToAssign,
+                            active = true
+                        };
+                    }).ToList();
+
+                    _context.RecipeParameters.AddRange(newParams);
+                }
+                // -------------------------------------------------------------------
+
+                //UpdateRecipeStageParameters(stage, newBaseStage);
+                //}
+
+                await _context.SaveChangesAsync(); // ← сохраняем все изменения, включая Tag
+
+                if (gridControlStages.IsHandleCreated && !gridControlStages.IsDisposed)
+                    gridViewStages.RefreshRow(e.RowHandle);
             }
-            // -------------------------------------------------------------------
-
-            //UpdateRecipeStageParameters(stage, newBaseStage);
-        //}
-
-            _context.SaveChanges(); // ← сохраняем все изменения, включая Tag
-
-            gridViewStages.RefreshRow(e.RowHandle);
+            finally
+            {
+                gridControlStages.EndUpdate();
+            }
         }
 
         private void GridViewStages_FocusedRowChanged(object sender, DevExpress.XtraGrid.Views.Base.FocusedRowChangedEventArgs e)
@@ -149,7 +163,7 @@ namespace TecxRecipeAX
         {
             //if (e.Row is RecipeStagePLC stage)
             //{
-                _context.SaveChanges();
+                _context.SaveChangesAsync();
             //}
         }
 
@@ -635,6 +649,8 @@ namespace TecxRecipeAX
         {
             if (gridControlStages != null)
             {
+                gridViewStages.CellValueChanged -= GridViewStages_CellValueChanged;
+
                 gridControlStages.Visible = false; // предотвратит перерисовку
                 gridControlStages.Parent = null;   // удалит из иерархии
                 gridControlStages.DataSource = null;
@@ -642,8 +658,9 @@ namespace TecxRecipeAX
                 gridControlStages.Dispose();
             }
 
-            //_context.Dispose();
-            //DataUpdated?.Invoke(this, EventArgs.Empty);
+            recipeStageBindingList?.Clear();
+            recipeStageBindingList = null;
+
         }
         #endregion
 

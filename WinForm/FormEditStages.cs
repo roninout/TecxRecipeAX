@@ -40,6 +40,7 @@ namespace TecxRecipeAX
         private async Task InitializeAsync()
         {
             await LoadDataAsync();
+            await Task.Yield(); // гарантирует возврат в UI-поток
             ConfigureGridView();
             ConfigureParameterCellStyles(); // стилизация ячеек
             await InitializeBaseRecipeIdLookUpEditForParameters();
@@ -112,41 +113,47 @@ namespace TecxRecipeAX
         private void ConfigureGridView()
         {
             gridViewStages.BeginUpdate();
-            gridViewStages.OptionsBehavior.Editable = true;
-            gridViewStages.OptionsView.NewItemRowPosition = NewItemRowPosition.None;
-            gridViewStages.OptionsView.ShowGroupPanel = false;
-
-            gridViewStages.OptionsSelection.MultiSelect = true;
-            gridViewStages.OptionsSelection.MultiSelectMode = GridMultiSelectMode.RowSelect;
-
-            // Настройка колонок параметров
-            for (int i = 1; i <= ParameterCount; i++)
+            try
             {
-                var column = gridViewStages.Columns.AddVisible($"Parameter{i}Name", $"Parameter {i}");
-                //column.ColumnEdit = CreateParameterRepository();
-                //column.Width = 250;
-            }
+                gridViewStages.OptionsBehavior.Editable = true;
+                gridViewStages.OptionsView.NewItemRowPosition = NewItemRowPosition.None;
+                gridViewStages.OptionsView.ShowGroupPanel = false;
 
-            //обрабатываем событие для динамического назначения редактора
-            gridViewStages.CustomRowCellEdit += (s, e) =>
-            {
+                gridViewStages.OptionsSelection.MultiSelect = true;
+                gridViewStages.OptionsSelection.MultiSelectMode = GridMultiSelectMode.RowSelect;
+
+                // Настройка колонок параметров
                 for (int i = 1; i <= ParameterCount; i++)
                 {
-                    if (e.Column.FieldName == $"Parameter{i}Name")
+                    var column = gridViewStages.Columns.AddVisible($"Parameter{i}Name", $"Parameter {i}");
+                    //column.ColumnEdit = CreateParameterRepository();
+                    //column.Width = 250;
+                }
+
+                //обрабатываем событие для динамического назначения редактора
+                gridViewStages.CustomRowCellEdit += (s, e) =>
+                {
+                    for (int i = 1; i <= ParameterCount; i++)
                     {
-                        var row = gridViewStages.GetRow(e.RowHandle) as StageGridItem;
-                        if (row != null)
+                        if (e.Column.FieldName == $"Parameter{i}Name")
                         {
-                            e.RepositoryItem = CreateParameterRepository(row, i - 1); // i - 1 — индекс параметра
+                            var row = gridViewStages.GetRow(e.RowHandle) as StageGridItem;
+                            if (row != null)
+                            {
+                                e.RepositoryItem = CreateParameterRepository(row, i - 1); // i - 1 — индекс параметра
+                            }
                         }
                     }
-                }
-            };
+                };
 
-            // Сортировка по имени
-            gridViewStages.SortInfo.Add(new GridColumnSortInfo(gridViewStages.Columns["name"], DevExpress.Data.ColumnSortOrder.Ascending));
-            gridViewStages.EndUpdate();
-            gridViewStages.BestFitColumns();
+                // Сортировка по имени
+                gridViewStages.SortInfo.Add(new GridColumnSortInfo(gridViewStages.Columns["name"], DevExpress.Data.ColumnSortOrder.Ascending));
+                gridViewStages.BestFitColumns();
+            }
+            finally
+            {
+                gridViewStages.EndUpdate();
+            }
         }
 
         private RepositoryItemLookUpEdit CreateParameterRepository(StageGridItem row, int parameterIndex)

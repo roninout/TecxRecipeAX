@@ -44,6 +44,19 @@ namespace TecxRecipeAX
             await InitializeDataGrid();
             await InitializeBaseRecipeIdLookUpEdit();
         }
+
+        // при закрытии очищаем ресурсы
+        private void FormEditParameters_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (gridControlParameters != null)
+            {
+                gridControlParameters.Visible = false; // предотвратит перерисовку
+                gridControlParameters.Parent = null;   // удалит из иерархии
+                gridControlParameters.DataSource = null;
+                gridControlParameters.MainView = null; // убирает GridView
+                gridControlParameters.Dispose();
+            }
+        }
         #endregion
 
         #region Table
@@ -57,42 +70,46 @@ namespace TecxRecipeAX
 
                 _bindingList = new BindingList<BaseParameter>(parameters);
                 gridControlParameters.BeginUpdate();
-                gridControlParameters.DataSource = null;
-                gridControlParameters.DataSource = _bindingList;
-                gridControlParameters.EndUpdate();
+                try
+                {
+                    gridControlParameters.DataSource = null;
+                    gridControlParameters.DataSource = _bindingList;
 
-                gridViewParameters.BeginUpdate();
-                gridViewParameters.OptionsBehavior.Editable = true;
-                gridViewParameters.OptionsView.NewItemRowPosition = NewItemRowPosition.None;
-                gridViewParameters.OptionsView.ShowGroupPanel = false;
+                    gridViewParameters.OptionsBehavior.Editable = true;
+                    gridViewParameters.OptionsView.NewItemRowPosition = NewItemRowPosition.None;
+                    gridViewParameters.OptionsView.ShowGroupPanel = false;
 
-                gridViewParameters.OptionsBehavior.AllowDeleteRows = DevExpress.Utils.DefaultBoolean.True;
-                gridViewParameters.OptionsSelection.MultiSelect = true;
-                gridViewParameters.OptionsSelection.MultiSelectMode = GridMultiSelectMode.RowSelect;
-                gridViewParameters.OptionsSelection.EnableAppearanceFocusedCell = false;
+                    gridViewParameters.OptionsBehavior.AllowDeleteRows = DevExpress.Utils.DefaultBoolean.True;
+                    gridViewParameters.OptionsSelection.MultiSelect = true;
+                    gridViewParameters.OptionsSelection.MultiSelectMode = GridMultiSelectMode.RowSelect;
+                    gridViewParameters.OptionsSelection.EnableAppearanceFocusedCell = false;
 
-                // Сортируем данные по колонке Type
-                gridViewParameters.SortInfo.Clear();
-                gridViewParameters.SortInfo.Add(new DevExpress.XtraGrid.Columns.GridColumnSortInfo(gridViewParameters.Columns["type"], DevExpress.Data.ColumnSortOrder.Ascending));
+                    // Сортируем данные по колонке Type
+                    gridViewParameters.SortInfo.Clear();
+                    gridViewParameters.SortInfo.Add(new DevExpress.XtraGrid.Columns.GridColumnSortInfo(gridViewParameters.Columns["type"], DevExpress.Data.ColumnSortOrder.Ascending));
 
-                // создаем колонку kind с комбобоксами
-                var columnKind = gridViewParameters.Columns.AddVisible("kindInt", "Type");
-                columnKind.ColumnEdit = CreateKindRepository();
-                columnKind.Width = 200;
+                    // создаем колонку kind с комбобоксами
+                    var columnKind = gridViewParameters.Columns.AddVisible("kindInt", "Type");
+                    columnKind.ColumnEdit = CreateKindRepository();
+                    columnKind.Width = 200;
 
-                // создаем колонку format с комбобоксами
-                var columnFormat = gridViewParameters.Columns.AddVisible("formatInt", "Format");
-                columnFormat.ColumnEdit = CreateFormatRepository();
-                columnFormat.Width = 100;
+                    // создаем колонку format с комбобоксами
+                    var columnFormat = gridViewParameters.Columns.AddVisible("formatInt", "Format");
+                    columnFormat.ColumnEdit = CreateFormatRepository();
+                    columnFormat.Width = 100;
 
-                // Устанавливаем информацию о количестве элементов в строке состояния
-                //gridViewParameters.OptionsView.ShowFooter = true;
-                //GridColumn colType = gridViewParameters.Columns["description"];
-                //colType.Summary.Add(DevExpress.Data.SummaryItemType.Count, "description", "Total items: {0}");
+                    // Устанавливаем информацию о количестве элементов в строке состояния
+                    //gridViewParameters.OptionsView.ShowFooter = true;
+                    //GridColumn colType = gridViewParameters.Columns["description"];
+                    //colType.Summary.Add(DevExpress.Data.SummaryItemType.Count, "description", "Total items: {0}");
 
-                LoadUsedParameterIds();
-                gridViewParameters.EndUpdate();
-                //gridViewParameters.RefreshData();
+                    LoadUsedParameterIds();
+                    gridViewParameters.RefreshData();
+                }
+                finally
+                {
+                    gridControlParameters.EndUpdate();
+                }                
             }
             catch (Exception ex)
             {
@@ -408,19 +425,25 @@ namespace TecxRecipeAX
 
             // Если "All" — отображаем все параметры
             gridControlParameters.BeginUpdate();
-            gridControlParameters.DataSource = null;
-            if (_selectedBaseRecipeId == null)
+            try
             {
-                gridControlParameters.DataSource = _bindingList;
+                gridControlParameters.DataSource = null;
+                if (_selectedBaseRecipeId == null)
+                {
+                    gridControlParameters.DataSource = _bindingList;
+                }
+                else
+                {
+                    // Отображаем только параметры с baseRecipeId = selectedId
+                    var filtered = _bindingList.Where(p => p.baseRecipeId == _selectedBaseRecipeId).ToList();
+                    gridControlParameters.DataSource = new BindingList<BaseParameter>(filtered);
+                }
+                gridViewParameters.RefreshData();
             }
-            else
+            finally
             {
-                // Отображаем только параметры с baseRecipeId = selectedId
-                var filtered = _bindingList.Where(p => p.baseRecipeId == _selectedBaseRecipeId).ToList();
-                gridControlParameters.DataSource = new BindingList<BaseParameter>(filtered);
+                gridControlParameters.EndUpdate();
             }
-            gridViewParameters.RefreshData();
-            gridControlParameters.EndUpdate();
         }
         #endregion
     }

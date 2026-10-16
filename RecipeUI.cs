@@ -156,8 +156,10 @@ namespace TechRecipeAX
                 // Подписываемся на событие изменения внешнего параметра
                 SubscribeToCurStageIntPropertyChanged();
 
+                //InitCtApi();
+
                 InitializePlcReadTimer(); // запуск
-                Logger.Info(@"Ініціалізація програми закінчилася успішно");
+                Logger.Info(@" -------------------- Ініціалізація програми закінчилася успішно ---------------- ");
             }
             catch (Exception ex)
             {
@@ -219,7 +221,7 @@ namespace TechRecipeAX
                 int currentItem = 0;
 
                 var stages = await _context.RecipeStages.ToListAsync();
-                Logger.Debug($"Завантаження {stages.Count} записів");
+                Logger.Debug($"Завантаження стадій закінчено: {stages.Count} записів");
 
                 foreach (var stage in stages)
                 {
@@ -257,15 +259,11 @@ namespace TechRecipeAX
             _ctApi.SetCtApiDirectory(ConfigHelper.CtApiPath);
             
             if (string.IsNullOrEmpty(ConfigHelper.CtApiIp))
-            {
                 await _ctApi.OpenAsync();
-            }
             else
-            {
                 await _ctApi.OpenAsync(ConfigHelper.CtApiIp, ConfigHelper.CtApiUser, ConfigHelper.CtApiPassword, 0);
-            }
 
-            var findResult = await _ctApi.FindAsync("Tag", "Tag=*S01_Recipe*", "", "TAG");
+            //var findResult = await _ctApi.FindAsync("Tag", $"Tag=*S01_Recipe*", "", "TAG"); 8----------------------------------------------------------------------------------------------------------->
         }
 
         #endregion
@@ -736,11 +734,12 @@ namespace TechRecipeAX
                 {
                     var headerText = $"Редагування: [{selectedRecipe.id}] {selectedRecipe.name}";
                     LoadRecipeStagesAndParameters(selectedRecipe.id);
-                    textEditRecipeName.EditValue = headerText;
+
+                    textEditRecipeName.SafeInvoke(() =>{textEditRecipeName.EditValue = headerText;});
+                    //textEditRecipeName.EditValue = headerText;
 
                     //var findRecipe = _context.RecipePages.FirstOrDefault(rp => rp.baseRecipeId == currentBaseRecipeId && rp.page == pageNameStrProperty);
                     //textEditRecipeName.EditValue = findRecipe.recipeId != selectedId ? headerText : $"*{headerText} (поточний)";
-
                     //btnAssignRecipeToPages.Enabled = findRecipe.recipeId != selectedId;
                 }
             }
@@ -914,16 +913,28 @@ namespace TechRecipeAX
                 LoadRecipeFromPLC(recipeFromPLC);                           // отображаем в таблице
 
                 checkBoxShowPLC.ImageOptions.SvgImage = Resources.electronics_desktopmac;
-                textEditRecipeName.ForeColor = Color.Gray; //Color.FromArgb(64, 64, 64);
-                textEditRecipeName.EditValue = $"[{selectedRecipe.id}] {selectedRecipe.name}";
+
+                textEditRecipeName.SafeInvoke(() => {
+                    textEditRecipeName.ForeColor = Color.Gray;
+                    textEditRecipeName.EditValue = $"[{selectedRecipe.id}] {selectedRecipe.name}";
+                });
+
+                //textEditRecipeName.ForeColor = Color.Gray; //Color.FromArgb(64, 64, 64);
+                //textEditRecipeName.EditValue = $"[{selectedRecipe.id}] {selectedRecipe.name}";
             }
             else
             {
                 LoadRecipeFromDatabase();
 
                 checkBoxShowPLC.ImageOptions.SvgImage = Resources.editdatasource;
-                textEditRecipeName.ForeColor = Color.Orange;
-                textEditRecipeName.EditValue = $"Редагування: [{selectedRecipe.id}] {selectedRecipe.name}";
+
+                textEditRecipeName.SafeInvoke(() => {
+                    textEditRecipeName.ForeColor = Color.Orange;
+                    textEditRecipeName.EditValue = $"Редагування: [{selectedRecipe.id}] {selectedRecipe.name}";
+                });
+
+                //textEditRecipeName.ForeColor = Color.Orange;
+                //textEditRecipeName.EditValue = $"Редагування: [{selectedRecipe.id}] {selectedRecipe.name}";
             }
 
             UpdateButtonsState(!isShowingPLCData); // делаем кнопки неактивными
@@ -1116,8 +1127,14 @@ namespace TechRecipeAX
                     LoadRecipeFromDatabase();
 
                     checkBoxShowPLC.ImageOptions.SvgImage = Resources.editdatasource;
-                    textEditRecipeName.ForeColor = Color.Orange;
-                    textEditRecipeName.EditValue = $"Редагування: [{selectedRecipe.id}] {selectedRecipe.name}";
+
+                    textEditRecipeName.SafeInvoke(() => {
+                        textEditRecipeName.ForeColor = Color.Orange;
+                        textEditRecipeName.EditValue = $"Редагування: [{selectedRecipe.id}] {selectedRecipe.name}";
+                    });
+
+                    //textEditRecipeName.ForeColor = Color.Orange;
+                    //textEditRecipeName.EditValue = $"Редагування: [{selectedRecipe.id}] {selectedRecipe.name}";
                 }
                 else
                 {
@@ -1444,6 +1461,7 @@ namespace TechRecipeAX
             // Освобождаем PLC API
             if (_ctApi != null)
             {
+                _ctApi.Close();
                 _ctApi.Dispose();
                 _ctApi = null;
                 Logger.Info("CTApi - Disposed!");
